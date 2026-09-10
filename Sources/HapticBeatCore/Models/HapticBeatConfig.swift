@@ -8,7 +8,7 @@ public enum FrequencyBand: String, CaseIterable, Sendable {
     public var minFrequency: Float {
         switch self {
         case .bass: return 20.0
-        case .mid: return 150.0
+        case .mid: return 151.0
         case .full: return 20.0
         }
     }

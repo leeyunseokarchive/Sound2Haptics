@@ -15,7 +15,7 @@ final class HapticBeatConfigTests: XCTestCase {
         XCTAssertEqual(FrequencyBand.bass.minFrequency, 20.0)
         XCTAssertEqual(FrequencyBand.bass.maxFrequency, 150.0)
 
-        XCTAssertEqual(FrequencyBand.mid.minFrequency, 150.0)
+        XCTAssertEqual(FrequencyBand.mid.minFrequency, 151.0)
         XCTAssertEqual(FrequencyBand.mid.maxFrequency, 2000.0)
 
         XCTAssertEqual(FrequencyBand.full.minFrequency, 20.0)

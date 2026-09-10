@@ -94,11 +94,11 @@ public struct HapticBeatConfig: Sendable {
 
     public init(
         isEnabled: Bool = true,
-        threshold: Float = 0.45,
+        threshold: Float = 0.25,
         cooldownMs: Double = 90.0,
         frequencyBand: FrequencyBand = .bass,
         pattern: HapticPattern = .medium,
-        onsetSensitivity: Float = 0.08
+        onsetSensitivity: Float = 0.04
     ) {
         self.isEnabled = isEnabled
         self._threshold = min(max(threshold, 0.05), 0.95)

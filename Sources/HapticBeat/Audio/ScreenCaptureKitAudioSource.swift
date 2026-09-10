@@ -2,6 +2,7 @@ import Foundation
 import ScreenCaptureKit
 import CoreMedia
 import AVFoundation
+import CoreAudio
 import HapticBeatCore
 
 public final class ScreenCaptureKitAudioSource: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
@@ -47,10 +48,12 @@ public final class ScreenCaptureKitAudioSource: NSObject, SCStreamOutput, SCStre
             self.stream = newStream
             self.isRunning = true
             self.onStatusChange?(true)
+            print("[HapticBeat] ScreenCaptureKit audio capture stream successfully started.")
         } catch {
             self.isRunning = false
             self.onStatusChange?(false)
             self.onPermissionError?(error.localizedDescription)
+            print("[HapticBeat] ScreenCaptureKit start error: \(error)")
         }
     }
 
@@ -64,6 +67,7 @@ public final class ScreenCaptureKitAudioSource: NSObject, SCStreamOutput, SCStre
         self.stream = nil
         self.isRunning = false
         self.onStatusChange?(false)
+        print("[HapticBeat] ScreenCaptureKit audio capture stopped.")
     }
 
     // MARK: - SCStreamOutput
@@ -78,33 +82,38 @@ public final class ScreenCaptureKitAudioSource: NSObject, SCStreamOutput, SCStre
         let sampleRate = Float(asbd.mSampleRate > 0 ? asbd.mSampleRate : 48000.0)
         let channelCount = Int(asbd.mChannelsPerFrame > 0 ? asbd.mChannelsPerFrame : 2)
 
+        let maxBuffers = max(1, channelCount)
+        let bufferListSize = AudioBufferList.sizeInBytes(maximumBuffers: maxBuffers)
+        let bufferListPtr = AudioBufferList.allocate(maximumBuffers: maxBuffers)
+        defer { free(bufferListPtr.unsafeMutablePointer) }
+
         var blockBuffer: CMBlockBuffer?
-        var bufferList = AudioBufferList()
         let status = CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(
             sampleBuffer,
             bufferListSizeNeededOut: nil,
-            bufferListOut: &bufferList,
-            bufferListSize: MemoryLayout<AudioBufferList>.size,
+            bufferListOut: bufferListPtr.unsafeMutablePointer,
+            bufferListSize: bufferListSize,
             blockBufferAllocator: nil,
             blockBufferMemoryAllocator: nil,
             flags: 0,
             blockBufferOut: &blockBuffer
         )
 
-        guard status == noErr else { return }
+        guard status == noErr else {
+            return
+        }
 
-        let buffers = UnsafeMutableAudioBufferListPointer(&bufferList)
-        if buffers.count == 1, let mData = buffers[0].mData {
-            // Interleaved audio
+        if bufferListPtr.count == 1, let mData = bufferListPtr[0].mData {
+            // Interleaved or Mono audio
             let floatPtr = mData.assumingMemoryBound(to: Float.self)
-            let sampleCount = Int(buffers[0].mDataByteSize) / MemoryLayout<Float>.size
+            let sampleCount = Int(bufferListPtr[0].mDataByteSize) / MemoryLayout<Float>.size
             let samples = Array(UnsafeBufferPointer(start: floatPtr, count: sampleCount))
             processor.feedInterleavedAudio(samples: samples, channelCount: channelCount, sampleRate: sampleRate)
-        } else if buffers.count >= 2, let leftData = buffers[0].mData, let rightData = buffers[1].mData {
+        } else if bufferListPtr.count >= 2, let leftData = bufferListPtr[0].mData, let rightData = bufferListPtr[1].mData {
             // Non-interleaved stereo
             let leftPtr = leftData.assumingMemoryBound(to: Float.self)
             let rightPtr = rightData.assumingMemoryBound(to: Float.self)
-            let frameCount = Int(buffers[0].mDataByteSize) / MemoryLayout<Float>.size
+            let frameCount = Int(bufferListPtr[0].mDataByteSize) / MemoryLayout<Float>.size
 
             var mono = [Float](repeating: 0.0, count: frameCount)
             for i in 0..<frameCount {

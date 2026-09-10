@@ -55,6 +55,43 @@ if CommandLine.arguments.contains("--demo-dsp") {
     exit(0)
 }
 
+if CommandLine.arguments.contains("--test-capture") {
+    print("Testing ScreenCaptureKit real-time system audio capture...")
+    let mock = MockHapticActuator()
+    let config = HapticBeatConfig(threshold: 0.15, frequencyBand: .bass)
+    let processor = AudioStreamProcessor(analyzer: AudioDSPAnalyzer(), engine: HapticEngine(actuator: mock, config: config))
+    let source = ScreenCaptureKitAudioSource(processor: processor)
+
+    final class FrameCounter: @unchecked Sendable {
+        var count = 0
+        let lock = NSLock()
+        func inc() -> Int {
+            lock.lock()
+            defer { lock.unlock() }
+            count += 1
+            return count
+        }
+    }
+    let frameCounter = FrameCounter()
+
+    processor.onAnalysis = { res in
+        let c = frameCounter.inc()
+        if c % 10 == 0 {
+            print(String(format: "[Capture Test] Frame #%d | BandEnergy: %.1f%% | Total: %.1f%% | Trigger: %@", c, res.bandEnergy * 100, res.totalEnergy * 100, res.isTrigger ? "BEAT!" : "no"))
+        }
+    }
+
+    Task {
+        await source.startCapture()
+        print("Capturing system audio for 3 seconds...")
+        try await Task.sleep(nanoseconds: 3_000_000_000)
+        await source.stopCapture()
+        print("--> Test complete. Total analyzed frames: \(frameCounter.count), Actuations: \(mock.actuateCount)")
+        exit(0)
+    }
+    RunLoop.main.run()
+}
+
 let delegate = AppDelegate()
 app.delegate = delegate
 app.run()

@@ -5,7 +5,7 @@ final class HapticBeatConfigTests: XCTestCase {
     func testDefaultConfigValues() {
         let config = HapticBeatConfig()
         XCTAssertTrue(config.isEnabled)
-        XCTAssertEqual(config.threshold, 0.45, accuracy: 0.001)
+        XCTAssertEqual(config.threshold, 0.25, accuracy: 0.001)
         XCTAssertEqual(config.cooldownMs, 90.0, accuracy: 0.1)
         XCTAssertEqual(config.frequencyBand, .bass)
         XCTAssertEqual(config.pattern, .medium)

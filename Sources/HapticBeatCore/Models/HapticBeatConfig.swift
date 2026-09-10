@@ -92,13 +92,20 @@ public struct HapticBeatConfig: Sendable {
         set { _onsetSensitivity = min(max(newValue, 0.01), 0.5) }
     }
 
+    private var _inputGain: Float
+    public var inputGain: Float {
+        get { _inputGain }
+        set { _inputGain = min(max(newValue, 0.1), 2.0) }
+    }
+
     public init(
         isEnabled: Bool = true,
         threshold: Float = 0.25,
         cooldownMs: Double = 90.0,
         frequencyBand: FrequencyBand = .bass,
         pattern: HapticPattern = .medium,
-        onsetSensitivity: Float = 0.04
+        onsetSensitivity: Float = 0.04,
+        inputGain: Float = 1.0
     ) {
         self.isEnabled = isEnabled
         self._threshold = min(max(threshold, 0.05), 0.95)
@@ -106,5 +113,6 @@ public struct HapticBeatConfig: Sendable {
         self.frequencyBand = frequencyBand
         self.pattern = pattern
         self._onsetSensitivity = min(max(onsetSensitivity, 0.01), 0.5)
+        self._inputGain = min(max(inputGain, 0.1), 2.0)
     }
 }

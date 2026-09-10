@@ -40,8 +40,8 @@ if CommandLine.arguments.contains("--demo-dsp") {
         }
     }
     let counter = SafeCounter()
-    processor.onHapticTrigger = { _ in
-        counter.increment()
+    processor.onAnalysis = { res in
+        print(String(format: "[DSP Demo] Frame | Low(Bass): %.0f%% | Mid: %.0f%% | High(Treble): %.0f%% | Pan: %.2f | Trigger: %@", res.lowEnergy * 100, res.midEnergy * 100, res.highEnergy * 100, res.stereoPan, res.isTrigger ? "BEAT!" : "-"))
     }
 
     for frame in 0..<10 {
@@ -77,7 +77,7 @@ if CommandLine.arguments.contains("--test-capture") {
     processor.onAnalysis = { res in
         let c = frameCounter.inc()
         if c % 10 == 0 {
-            print(String(format: "[Capture Test] Frame #%d | BandEnergy: %.1f%% | Total: %.1f%% | Trigger: %@", c, res.bandEnergy * 100, res.totalEnergy * 100, res.isTrigger ? "BEAT!" : "no"))
+            print(String(format: "[Capture Test] Frame #%d | Low: %.0f%% | Mid: %.0f%% | High: %.0f%% | Pan: %+.2f | Trigger: %@", c, res.lowEnergy * 100, res.midEnergy * 100, res.highEnergy * 100, res.stereoPan, res.isTrigger ? "BEAT!" : "-"))
         }
     }
 

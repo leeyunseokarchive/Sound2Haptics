@@ -102,4 +102,49 @@ final class AudioStreamProcessorTests: XCTestCase {
         XCTAssertNotNil(collector.last)
         XCTAssertGreaterThan(collector.last!.bandEnergy, 0.3)
     }
+
+    func testStereoPanningLeftAndRight() {
+        let processor = AudioStreamProcessor()
+        let collector = TestCollector<AudioAnalysisResult>()
+        processor.onAnalysis = { res in collector.append(res) }
+
+        let count = 1024
+        let wave = (0..<count).map { i in 0.8 * sin(2.0 * .pi * 80.0 * Float(i) / 48000.0) }
+        let silent = [Float](repeating: 0.0, count: count)
+
+        // Test Left heavy (Left: wave, Right: silent) -> pan should be negative
+        processor.feedStereoAudio(left: wave, right: silent, sampleRate: sampleRate)
+        XCTAssertNotNil(collector.last)
+        XCTAssertLessThan(collector.last!.stereoPan, -0.8)
+
+        // Reset and test Right heavy (Left: silent, Right: wave) -> pan should be positive
+        processor.reset()
+        processor.feedStereoAudio(left: silent, right: wave, sampleRate: sampleRate)
+        XCTAssertNotNil(collector.last)
+        XCTAssertGreaterThan(collector.last!.stereoPan, 0.8)
+    }
+
+    func testInputGainScaling() {
+        let mockActuator = MockHapticActuator()
+        let normalConfig = HapticBeatConfig(inputGain: 1.0)
+        let processorNormal = AudioStreamProcessor(engine: HapticEngine(actuator: mockActuator, config: normalConfig))
+
+        let collectorNormal = TestCollector<AudioAnalysisResult>()
+        processorNormal.onAnalysis = { res in collectorNormal.append(res) }
+
+        let wave = (0..<1024).map { i in 0.5 * sin(2.0 * .pi * 60.0 * Float(i) / 48000.0) }
+        processorNormal.feedMonoAudio(samples: wave, sampleRate: sampleRate)
+
+        let halfConfig = HapticBeatConfig(inputGain: 0.5)
+        let processorHalf = AudioStreamProcessor(engine: HapticEngine(actuator: mockActuator, config: halfConfig))
+
+        let collectorHalf = TestCollector<AudioAnalysisResult>()
+        processorHalf.onAnalysis = { res in collectorHalf.append(res) }
+
+        processorHalf.feedMonoAudio(samples: wave, sampleRate: sampleRate)
+
+        XCTAssertNotNil(collectorNormal.last)
+        XCTAssertNotNil(collectorHalf.last)
+        XCTAssertGreaterThan(collectorNormal.last!.bandEnergy, collectorHalf.last!.bandEnergy)
+    }
 }

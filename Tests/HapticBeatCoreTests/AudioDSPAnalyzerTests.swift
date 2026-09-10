@@ -66,4 +66,20 @@ final class AudioDSPAnalyzerTests: XCTestCase {
         let result = analyzer.process(samples: quietBass, sampleRate: sampleRate, config: highThresholdConfig)
         XCTAssertFalse(result.isTrigger)
     }
+
+    func testSubBandEnergiesSeparation() {
+        let analyzer = AudioDSPAnalyzer(fftSize: fftSize)
+        let bassWave = generateSineWave(frequency: 80.0, sampleRate: sampleRate, count: fftSize, amplitude: 0.8)
+        let config = HapticBeatConfig()
+
+        let bassResult = analyzer.process(samples: bassWave, sampleRate: sampleRate, config: config)
+        XCTAssertGreaterThan(bassResult.lowEnergy, 0.3)
+        XCTAssertLessThan(bassResult.highEnergy, 0.1)
+
+        analyzer.reset()
+        let trebleWave = generateSineWave(frequency: 6000.0, sampleRate: sampleRate, count: fftSize, amplitude: 0.8)
+        let trebleResult = analyzer.process(samples: trebleWave, sampleRate: sampleRate, config: config)
+        XCTAssertGreaterThan(trebleResult.highEnergy, 0.3)
+        XCTAssertLessThan(trebleResult.lowEnergy, 0.1)
+    }
 }

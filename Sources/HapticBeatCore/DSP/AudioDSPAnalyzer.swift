@@ -4,12 +4,29 @@ import Accelerate
 public struct AudioAnalysisResult: Sendable {
     public let bandEnergy: Float
     public let totalEnergy: Float
+    public let lowEnergy: Float
+    public let midEnergy: Float
+    public let highEnergy: Float
+    public let stereoPan: Float
     public let isTrigger: Bool
     public let onsetDelta: Float
 
-    public init(bandEnergy: Float, totalEnergy: Float, isTrigger: Bool, onsetDelta: Float) {
+    public init(
+        bandEnergy: Float,
+        totalEnergy: Float,
+        lowEnergy: Float = 0.0,
+        midEnergy: Float = 0.0,
+        highEnergy: Float = 0.0,
+        stereoPan: Float = 0.0,
+        isTrigger: Bool,
+        onsetDelta: Float
+    ) {
         self.bandEnergy = bandEnergy
         self.totalEnergy = totalEnergy
+        self.lowEnergy = lowEnergy
+        self.midEnergy = midEnergy
+        self.highEnergy = highEnergy
+        self.stereoPan = stereoPan
         self.isTrigger = isTrigger
         self.onsetDelta = onsetDelta
     }
@@ -56,9 +73,36 @@ public final class AudioDSPAnalyzer: @unchecked Sendable {
         previousBandEnergy = 0.0
     }
 
-    public func process(samples: [Float], sampleRate: Float, config: HapticBeatConfig) -> AudioAnalysisResult {
+    private func energyForRange(minFreq: Float, maxFreq: Float, binResolution: Float) -> Float {
+        let minBin = max(0, min(halfSize - 1, Int(minFreq / binResolution)))
+        let maxBin = max(minBin, min(halfSize - 1, Int(maxFreq / binResolution)))
+        let binCount = maxBin - minBin + 1
+        guard binCount > 0 else { return 0.0 }
+        var sum: Float = 0.0
+        magnitudes.withUnsafeBufferPointer { magPtr in
+            let slice = magPtr.baseAddress!.advanced(by: minBin)
+            vDSP_sve(slice, 1, &sum, vDSP_Length(binCount))
+        }
+        return min(1.0, sqrt(sum))
+    }
+
+    public func process(
+        samples: [Float],
+        sampleRate: Float,
+        config: HapticBeatConfig,
+        stereoPan: Float = 0.0
+    ) -> AudioAnalysisResult {
         guard samples.count >= fftSize, sampleRate > 0 else {
-            return AudioAnalysisResult(bandEnergy: 0.0, totalEnergy: 0.0, isTrigger: false, onsetDelta: 0.0)
+            return AudioAnalysisResult(
+                bandEnergy: 0.0,
+                totalEnergy: 0.0,
+                lowEnergy: 0.0,
+                midEnergy: 0.0,
+                highEnergy: 0.0,
+                stereoPan: stereoPan,
+                isTrigger: false,
+                onsetDelta: 0.0
+            )
         }
 
         // Total RMS energy
@@ -67,7 +111,16 @@ public final class AudioDSPAnalyzer: @unchecked Sendable {
 
         if totalEnergy < 0.0001 {
             previousBandEnergy = 0.0
-            return AudioAnalysisResult(bandEnergy: 0.0, totalEnergy: 0.0, isTrigger: false, onsetDelta: 0.0)
+            return AudioAnalysisResult(
+                bandEnergy: 0.0,
+                totalEnergy: 0.0,
+                lowEnergy: 0.0,
+                midEnergy: 0.0,
+                highEnergy: 0.0,
+                stereoPan: stereoPan,
+                isTrigger: false,
+                onsetDelta: 0.0
+            )
         }
 
         // Apply Hann window
@@ -100,20 +153,18 @@ public final class AudioDSPAnalyzer: @unchecked Sendable {
 
         // Frequency resolution per FFT bin
         let binResolution = sampleRate / Float(fftSize)
-        let minBin = max(0, min(halfSize - 1, Int(config.frequencyBand.minFrequency / binResolution)))
-        let maxBin = max(minBin, min(halfSize - 1, Int(config.frequencyBand.maxFrequency / binResolution)))
 
-        let binCount = maxBin - minBin + 1
-        var bandSum: Float = 0.0
-        if binCount > 0 {
-            magnitudes.withUnsafeBufferPointer { magPtr in
-                let slice = magPtr.baseAddress!.advanced(by: minBin)
-                vDSP_sve(slice, 1, &bandSum, vDSP_Length(binCount))
-            }
-        }
+        // Sub-band energies for 2D spatial visualizer
+        let lowEnergy = energyForRange(minFreq: 20.0, maxFreq: 150.0, binResolution: binResolution)
+        let midEnergy = energyForRange(minFreq: 151.0, maxFreq: 2000.0, binResolution: binResolution)
+        let highEnergy = energyForRange(minFreq: 2000.0, maxFreq: 20000.0, binResolution: binResolution)
 
-        // Normalized band energy (sqrt of power sum)
-        let normalizedBandEnergy = min(1.0, sqrt(bandSum))
+        // Target configured band energy
+        let normalizedBandEnergy = energyForRange(
+            minFreq: config.frequencyBand.minFrequency,
+            maxFreq: config.frequencyBand.maxFrequency,
+            binResolution: binResolution
+        )
 
         // Transient onset detection
         let delta = normalizedBandEnergy - previousBandEnergy
@@ -127,6 +178,10 @@ public final class AudioDSPAnalyzer: @unchecked Sendable {
         return AudioAnalysisResult(
             bandEnergy: normalizedBandEnergy,
             totalEnergy: min(1.0, totalEnergy * 2.0),
+            lowEnergy: lowEnergy,
+            midEnergy: midEnergy,
+            highEnergy: highEnergy,
+            stereoPan: stereoPan,
             isTrigger: isTrigger,
             onsetDelta: max(0.0, delta)
         )

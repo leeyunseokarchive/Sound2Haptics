@@ -94,16 +94,26 @@ AI 에이전트와 체계적인 엔지니어링 절차(TDD, Spec 구체화, 하�
 - `ScreenCaptureKitAudioSource.swift`에서 채널 수에 맞춰 `AudioBufferList.allocate(maximumBuffers: channelCount)`를 동적으로 할당하고 `free()`로 반환하도록 수정하여 에러 코드 `-12737`을 완전히 제거했습니다.
 - 브라우저 음악 및 유튜브의 평균 마스터 볼륨 음압에 맞춰 기본 임계값을 45%에서 실용적인 **25%**로, 순간 어택 감도를 0.08에서 **0.04**로 튜닝하여, 브라우저에서 음악을 틀자마자 트랙패드가 즉각 리듬감 있게 반응하도록 개선했습니다. (`swift run HapticBeat --test-capture`로 실제 시스템 오디오 282프레임 캡처 및 햅틱 정상 격발 검증 완료)
 
+### 해결 6: 2D 트랙패드 햅틱 매트릭스(사운드 레이더) & 입력 게인(Input Gain) 제어 구현
+- **2D 공간 오디오 레이더(Sound Radar)**:
+  - Y축 주파수 매핑: 하단(Low Bass, 20~150Hz), 중앙(Mid Vocals, 151~2000Hz), 상단(High Treble, 2000~20000Hz)을 실시간 Accelerate vDSP 파워 스펙트럼으로 분리 계산하여 네온 오가닉 발광체(Glow Orb)로 시각화했습니다.
+  - X축 스테레오 패닝 매핑: 좌/우 채널 RMS 에너지 비율($Pan = \frac{RMS_R - RMS_L}{\max(0.001, RMS_R + RMS_L)}$)을 실시간 산출하여 $[-1.0, 1.0]$ 범위로 오가닉 노드가 좌/우로 반응하여 이동하도록 구현했습니다.
+  - 햅틱 동기화 충격파 링: 박자 감지 시 트랙패드 표면에 시각적 펄스 링(Shockwave Ripple)이 확산되어 촉각과 시각이 일치하는 공감각적 피드백을 완성했습니다.
+- **입력 게인(Input Gain) 제어**:
+  - 음압이 매우 높은 EDM/힙합 음원 재생 시 100% 피크가 지속 발생하거나 조용한 클래식/재즈 음원에서 감도가 낮아지는 현상을 방지하기 위해, FFT 진입 전 `vDSP_vsmul` 기반의 입력 게인(10%~200%, 0.1x~2.0x) 슬라이더를 장착했습니다.
+- **UI/UX 간소화**:
+  - 실사용 빈도가 낮은 120BPM 데모 버튼과 쿨다운 슬라이더를 제거하고, `ui-ux-pro-max` 다크 모드 HUD 스타일로 세련되고 깔끔한 팝오버를 완성했습니다.
+
 ---
 
 ## 5. 검증 결과 및 산출물 요약
 
 | 검증 항목 | 검증 명령어 | 결과 | 비고 |
 |---|---|---|---|
-| **TDD 단위 테스트** | `swift test` | **17 / 17 통과 (0.005초)** | DSP, 햅틱 쿨다운, 버퍼 스트리밍 검증 완료 |
+| **TDD 단위 테스트** | `swift test` | **21 / 21 통과 (0.007초)** | 주파수 대역 분리, 스테레오 패닝, 입력 게인 검증 완료 |
 | **빌드 안정성** | `swift build` | **Exit code 0 (빌드 성공)** | Swift 6 엄격한 동시성(Sendable) 경고 0건 |
 | **물리 하드웨어 테스트** | `swift run HapticBeat --test-actuator` | **SUCCESS (Clicked)** | 맥북 트랙패드 햅틱 액추에이터 실제 동작 확인 |
-| **파이프라인 시뮬레이션** | `swift run HapticBeat --demo-dsp` | **SUCCESS (1 beat actuated)** | 오디오 $\rightarrow$ FFT $\rightarrow$ 햅틱 격발 파이프라인 확인 |
+| **파이프라인 시뮬레이션** | `swift run HapticBeat --demo-dsp` | **SUCCESS (2 beats actuated)** | 2D 공간 텔레메트리(Low, Mid, High, Pan) 정상 산출 확인 |
 
 ---
 

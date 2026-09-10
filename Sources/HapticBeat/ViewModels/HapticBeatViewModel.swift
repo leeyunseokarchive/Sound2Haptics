@@ -15,6 +15,10 @@ public final class HapticBeatViewModel: ObservableObject {
     @Published public var isCapturing: Bool = false
     @Published public var currentBandEnergy: Float = 0.0
     @Published public var currentTotalEnergy: Float = 0.0
+    @Published public var lowEnergy: Float = 0.0
+    @Published public var midEnergy: Float = 0.0
+    @Published public var highEnergy: Float = 0.0
+    @Published public var stereoPan: Float = 0.0
     @Published public var isHapticFlashing: Bool = false
     @Published public var triggerCount: Int = 0
     @Published public var hasPermission: Bool = true
@@ -41,6 +45,10 @@ public final class HapticBeatViewModel: ObservableObject {
                 guard let self = self else { return }
                 self.currentBandEnergy = result.bandEnergy
                 self.currentTotalEnergy = result.totalEnergy
+                self.lowEnergy = result.lowEnergy
+                self.midEnergy = result.midEnergy
+                self.highEnergy = result.highEnergy
+                self.stereoPan = result.stereoPan
             }
         }
 

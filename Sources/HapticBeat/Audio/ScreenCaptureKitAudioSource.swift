@@ -115,11 +115,9 @@ public final class ScreenCaptureKitAudioSource: NSObject, SCStreamOutput, SCStre
             let rightPtr = rightData.assumingMemoryBound(to: Float.self)
             let frameCount = Int(bufferListPtr[0].mDataByteSize) / MemoryLayout<Float>.size
 
-            var mono = [Float](repeating: 0.0, count: frameCount)
-            for i in 0..<frameCount {
-                mono[i] = (leftPtr[i] + rightPtr[i]) * 0.5
-            }
-            processor.feedMonoAudio(samples: mono, sampleRate: sampleRate)
+            let left = Array(UnsafeBufferPointer(start: leftPtr, count: frameCount))
+            let right = Array(UnsafeBufferPointer(start: rightPtr, count: frameCount))
+            processor.feedStereoAudio(left: left, right: right, sampleRate: sampleRate)
         }
     }
 

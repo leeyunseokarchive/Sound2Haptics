@@ -45,4 +45,15 @@ final class HapticBeatConfigTests: XCTestCase {
         XCTAssertEqual(HapticPattern.medium.rawPatternId, 2)
         XCTAssertEqual(HapticPattern.strong.rawPatternId, 5)
     }
+
+    func testInputGainClamping() {
+        var config = HapticBeatConfig()
+        XCTAssertEqual(config.inputGain, 1.0, accuracy: 0.001)
+
+        config.inputGain = 3.0
+        XCTAssertEqual(config.inputGain, 2.0, accuracy: 0.001)
+
+        config.inputGain = 0.01
+        XCTAssertEqual(config.inputGain, 0.1, accuracy: 0.001)
+    }
 }

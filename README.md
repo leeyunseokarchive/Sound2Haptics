@@ -4,7 +4,7 @@
 
 <img src="assets/logo.png" width="160" alt="Sound2Haptics 로고 — 트랙패드 냥이">
 
-### **맥북 트랙패드로 느끼는 음악의 박자**
+### **Sound2Haptics: 맥북 트랙패드로 느끼는 비트와 공간감**
 
 유튜브나 음악을 틀면, 소리의 주파수와 위치에 맞춰 트랙패드가 손가락을 톡톡 쳐 줍니다.  
 BlackHole 같은 가상 오디오 드라이버를 깔 필요 없이, 앱 하나만 켜면 바로 작동합니다.
@@ -18,7 +18,7 @@ BlackHole 같은 가상 오디오 드라이버를 깔 필요 없이, 앱 하나�
 [![Tests: 36/36 Passing](https://img.shields.io/badge/Tests-36%2F36%20passed-brightgreen.svg)]()
 [![Driver-Free](https://img.shields.io/badge/Virtual%20Driver-Zero%20(No%20BlackHole)-success.svg)]()
 
-**[실제 동작](#실제-동작) · [왜 만들었는가](#왜-만들었는가) · [동작 원리](#동작-원리) · [설치 및 실행](#설치-및-실행) · [개발 보고서](docs/AI_Software_Lab_Week2_Report.md)**
+**[실제 동작](#실제-동작) · [왜 만들었는가](#왜-만들었는가) · [동작 원리](#동작-원리) · [설치 및 실행](#설치-및-실행)**
 
 <br/>
 
@@ -69,27 +69,29 @@ BlackHole 같은 가상 오디오 드라이버를 깔 필요 없이, 앱 하나�
 
 ```mermaid
 flowchart TD
-    A["macOS 시스템 소리<br/>(음악, 유튜브, 게임, 영화)"] -->|드라이버 없이 직접 수신| B["CoreAudio Process Tap<br/>ScreenCaptureKit"]
-    B -->|48kHz 오디오 버퍼| C["AudioStreamProcessor"]
+    A["macOS 시스템 소리<br/>(음악, 유튜브, 게임, 영화)"] -->|"드라이버 없이 직접 수신"| B["CoreAudio Process Tap<br/>ScreenCaptureKit"]
+    B -->|"48kHz 오디오 버퍼"| C["AudioStreamProcessor"]
     
     subgraph DSP ["Apple Accelerate vDSP (초고속 연산)"]
-        C -->|1024-pt FFT| D["AudioDSPAnalyzer"]
+        C -->|"1024-pt FFT"| D["AudioDSPAnalyzer"]
         D --> E["4개 주파수 대역 분리<br/>(서브베이스, 베이스, 미드, 트레블)"]
         D --> F["좌우 스테레오 패닝 계산"]
         D --> G["순간 어택 비트 검출"]
     end
 
     subgraph Hardware ["트랙패드 터치 감지"]
-        H["맥북 트랙패드"] -->|프라이빗 C ABI| I["MultitouchTracker"]
-        I -->|손가락 좌표 (x, y)| J["SpatialTouchGate"]
+        H["맥북 트랙패드"] -->|"프라이빗 C ABI"| I["MultitouchTracker"]
+        I -->|"손가락 좌표 (x, y)"| J["SpatialTouchGate"]
     end
 
-    E & F & G --> K["동적 진동 강도 판정기"]
-    K -->|Light / Medium / Strong 결정| L["HapticEngine"]
+    E --> K["동적 진동 강도 판정기"]
+    F --> K
+    G --> K
+    K -->|"Light / Medium / Strong 결정"| L["HapticEngine"]
     
-    J -->|터치 위치와 소리 대역 일치 확인| L
-    L -->|최소 쿨다운 보장| M["MultitouchActuator"]
-    M -->|트랙패드 클릭!| N["MacBook Taptic Engine"]
+    J -->|"터치 위치와 소리 대역 일치 확인"| L
+    L -->|"최소 쿨다운 보장"| M["MultitouchActuator"]
+    M -->|"트랙패드 클릭!"| N["MacBook Taptic Engine"]
 ```
 
 1. **소리 가로채기**: macOS 최신 기능(CoreAudio Process Tap)으로 가상 오디오 케이블 없이 시스템 소리를 지연 없이 바로 가져옵니다.
@@ -169,7 +171,7 @@ Test Suite 'All tests' passed at 2026-09-11 02:27:42.
 	 Executed 36 tests, with 0 failures (0 unexpected) in 0.026 seconds
 ```
 
-36개 테스트 모두 0.026초 만에 통과하며, 트랙패드 C ABI 메모리 정렬부터 주파수 분리 및 터치 게이팅까지 안정성을 검증했습니다. 자세한 문제 해결 과정과 분석 기록은 [개발 및 문제 해결 보고서](docs/AI_Software_Lab_Week2_Report.md)에서 확인하실 수 있습니다.
+36개 테스트 모두 0.026초 만에 통과하며, 트랙패드 C ABI 메모리 정렬부터 주파수 분리 및 터치 게이팅까지 안정성을 검증했습니다.
 
 ---
 
@@ -185,8 +187,6 @@ Sound2Haptics/
 │   ├── demo.gif                              # 동작 시연 애니메이션
 │   ├── ui_preview.png                        # 메뉴바 팝오버 UI 캡처
 │   └── trackpad_preview.png                  # 가상 트랙패드 상세 캡처
-├── docs/
-│   └── AI_Software_Lab_Week2_Report.md       # 10대 핵심 이슈 해결 보고서
 ├── Sources/
 │   ├── Sound2HapticsCore/                    # 코어 엔진 라이브러리
 │   │   ├── Audio/                            # 오디오 버퍼 처리기

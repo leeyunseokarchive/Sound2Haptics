@@ -18,7 +18,7 @@ No virtual audio drivers like BlackHole needed — just launch the app and it wo
 [![Tests: 36/36 Passing](https://img.shields.io/badge/Tests-36%2F36%20passed-brightgreen.svg)]()
 [![Driver-Free](https://img.shields.io/badge/Virtual%20Driver-Zero%20(No%20BlackHole)-success.svg)]()
 
-**[Live Demo](#live-demo) · [Why Sound2Haptics](#why-sound2haptics) · [How It Works](#how-it-works) · [Getting Started](#getting-started) · [Lab Report](docs/AI_Software_Lab_Week2_Report.md)**
+**[Live Demo](#live-demo) · [Why Sound2Haptics](#why-sound2haptics) · [How It Works](#how-it-works) · [Getting Started](#getting-started)**
 
 <br/>
 
@@ -69,27 +69,29 @@ Other solutions typically require messy virtual audio loopback drivers (BlackHol
 
 ```mermaid
 flowchart TD
-    A["macOS System Audio<br/>(Music, YouTube, Games, Movies)"] -->|Native Capture| B["CoreAudio Process Tap<br/>ScreenCaptureKit"]
-    B -->|48kHz PCM Buffer| C["AudioStreamProcessor"]
+    A["macOS System Audio<br/>(Music, YouTube, Games, Movies)"] -->|"Native Capture"| B["CoreAudio Process Tap<br/>ScreenCaptureKit"]
+    B -->|"48kHz PCM Buffer"| C["AudioStreamProcessor"]
     
     subgraph DSP ["Apple Accelerate vDSP"]
-        C -->|1024-pt FFT| D["AudioDSPAnalyzer"]
+        C -->|"1024-pt FFT"| D["AudioDSPAnalyzer"]
         D --> E["4 Frequency Bands<br/>(Sub-Bass, Bass, Mid, Treble)"]
         D --> F["Stereo Panning Analysis"]
         D --> G["Beat Onset Detection"]
     end
 
     subgraph Hardware ["Trackpad Multitouch"]
-        H["MacBook Trackpad"] -->|Private C ABI| I["MultitouchTracker"]
-        I -->|Finger Coordinates (x, y)| J["SpatialTouchGate"]
+        H["MacBook Trackpad"] -->|"Private C ABI"| I["MultitouchTracker"]
+        I -->|"Finger Coordinates (x, y)"| J["SpatialTouchGate"]
     end
 
-    E & F & G --> K["Dynamic Intensity Arbiter"]
-    K -->|Light / Medium / Strong| L["HapticEngine"]
+    E --> K["Dynamic Intensity Arbiter"]
+    F --> K
+    G --> K
+    K -->|"Light / Medium / Strong"| L["HapticEngine"]
     
-    J -->|Verify Touch Zone Matches Audio| L
-    L -->|Throttle Cooldown| M["MultitouchActuator"]
-    M -->|Physical Click!| N["MacBook Taptic Engine"]
+    J -->|"Verify Touch Zone Matches Audio"| L
+    L -->|"Throttle Cooldown"| M["MultitouchActuator"]
+    M -->|"Physical Click!"| N["MacBook Taptic Engine"]
 ```
 
 1. **Audio Tap**: Captures system audio cleanly using macOS native CoreAudio Process Tap without third-party audio drivers.

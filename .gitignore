@@ -4,3 +4,19 @@
 *.xcodeproj
 xcuserdata/
 .swiftpm/
+
+# Personal & Assignment Documents
+*.pdf
+*.docx
+*.doc
+*.pptx
+*.ppt
+*.xlsx
+*.xls
+[AISoftware]*
+스크린샷*
+Screenshot*
+Screen Shot*
+docs/AI_Software_Lab_Week2_Report.md
+docs/*과제*
+docs/*보고서*

@@ -7,10 +7,49 @@ final class HapticEngineTests: XCTestCase {
         let config = HapticBeatConfig(isEnabled: true, cooldownMs: 90.0, pattern: .medium)
         let engine = HapticEngine(actuator: mock, config: config)
 
-        let success = engine.trigger(energy: 0.8, timestamp: 1.000)
+        let success = engine.trigger(energy: 0.6, timestamp: 1.000)
         XCTAssertTrue(success)
         XCTAssertEqual(mock.actuateCount, 1)
         XCTAssertEqual(mock.recordedPatterns.first, .medium)
+    }
+
+    func testDynamicPatternSelection_LowEnergy_SelectsLight() {
+        let config = HapticBeatConfig(threshold: 0.25)
+        let engine = HapticEngine(actuator: MockHapticActuator(), config: config)
+        // Headroom = 0.75; Tier1 = 0.25 + 0.25 = 0.50
+        XCTAssertEqual(engine.dynamicPattern(for: 0.35), .light)
+    }
+
+    func testDynamicPatternSelection_MidEnergy_SelectsMedium() {
+        let config = HapticBeatConfig(threshold: 0.25)
+        let engine = HapticEngine(actuator: MockHapticActuator(), config: config)
+        // Tier2 = 0.25 + 0.50 = 0.75
+        XCTAssertEqual(engine.dynamicPattern(for: 0.60), .medium)
+    }
+
+    func testDynamicPatternSelection_HighEnergy_SelectsStrong() {
+        let config = HapticBeatConfig(threshold: 0.25)
+        let engine = HapticEngine(actuator: MockHapticActuator(), config: config)
+        // High = >= 0.75
+        XCTAssertEqual(engine.dynamicPattern(for: 0.85), .strong)
+    }
+
+    func testDynamicTriggerSelectsVaryingPatternsByEnergy() {
+        let mock = MockHapticActuator()
+        let config = HapticBeatConfig(threshold: 0.25, cooldownMs: 50.0)
+        let engine = HapticEngine(actuator: mock, config: config)
+
+        // Beat 1: Gentle bass note (energy 0.35) -> Light
+        engine.trigger(energy: 0.35, timestamp: 1.0)
+        XCTAssertEqual(mock.recordedPatterns.last, .light)
+
+        // Beat 2: Medium beat (energy 0.60) -> Medium
+        engine.trigger(energy: 0.60, timestamp: 1.1)
+        XCTAssertEqual(mock.recordedPatterns.last, .medium)
+
+        // Beat 3: Heavy kick drop (energy 0.90) -> Strong
+        engine.trigger(energy: 0.90, timestamp: 1.2)
+        XCTAssertEqual(mock.recordedPatterns.last, .strong)
     }
 
     func testDisabledConfigDoesNotActuate() {
@@ -60,3 +99,4 @@ final class HapticEngineTests: XCTestCase {
         XCTAssertEqual(mock.actuateCount, 0)
     }
 }
+

@@ -21,28 +21,49 @@ public final class HapticEngine: @unchecked Sendable {
         self.config = newConfig
     }
 
+    public func dynamicPattern(for energy: Float) -> HapticPattern {
+        let headroom = max(0.01, 1.0 - config.threshold)
+        let tier1 = config.threshold + headroom * 0.33
+        let tier2 = config.threshold + headroom * 0.67
+
+        if energy < tier1 {
+            return .light
+        } else if energy < tier2 {
+            return .medium
+        } else {
+            return .strong
+        }
+    }
+
     @discardableResult
     public func trigger(energy: Float, timestamp: Double? = nil) -> Bool {
+        return triggerWithPattern(energy: energy, timestamp: timestamp) != nil
+    }
+
+    public func triggerWithPattern(energy: Float, timestamp: Double? = nil) -> HapticPattern? {
         lock.lock()
         defer { lock.unlock() }
 
         guard config.isEnabled else {
-            return false
+            return nil
         }
 
         let now = timestamp ?? ProcessInfo.processInfo.systemUptime
         let cooldownSeconds = config.cooldownMs / 1000.0
 
         if now - lastActuatedTime < cooldownSeconds {
-            return false
+            return nil
         }
 
-        let success = actuator.actuate(pattern: config.pattern)
+        let pattern = dynamicPattern(for: energy)
+        let success = actuator.actuate(pattern: pattern)
         if success {
             lastActuatedTime = now
+            return pattern
         }
-        return success
+        return nil
     }
+
 
     public func reset() {
         lock.lock()

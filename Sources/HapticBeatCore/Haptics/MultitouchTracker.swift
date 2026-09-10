@@ -17,8 +17,13 @@ public final class MultitouchTracker: TouchTrackingSource, @unchecked Sendable {
     public var touches: [TrackpadTouch] {
         lock.lock()
         defer { lock.unlock() }
+        if !isTracking { return [] }
+        if lastFrameTime > 0 && ProcessInfo.processInfo.systemUptime - lastFrameTime > 0.3 {
+            return []
+        }
         return _touches
     }
+
 
     public private(set) var isAvailable: Bool = false
     public private(set) var isTracking: Bool = false
@@ -106,25 +111,46 @@ public final class MultitouchTracker: TouchTrackingSource, @unchecked Sendable {
         _touches = []
     }
 
-    fileprivate func handleFrame(touchPtr: UnsafeMutableRawPointer, numTouches: Int32) {
+    private var lastFrameTime: TimeInterval = 0
+
+    public static func parseTouches(from touchPtr: UnsafeRawPointer, numTouches: Int32) -> [TrackpadTouch] {
+        guard numTouches > 0 else { return [] }
         let stride = 96
         var current: [TrackpadTouch] = []
 
         for i in 0..<Int(numTouches) {
             let base = touchPtr.advanced(by: i * stride)
-            let state = base.advanced(by: 16).assumingMemoryBound(to: UInt32.self).pointee
-            let fingerID = base.advanced(by: 20).assumingMemoryBound(to: Int32.self).pointee
-            let x = base.advanced(by: 28).assumingMemoryBound(to: Float.self).pointee
-            let y = base.advanced(by: 32).assumingMemoryBound(to: Float.self).pointee
+            // Memory layout for MTTouch on arm64 macOS:
+            // offset 0: frame (Int32)
+            // offset 4: [padding 4 bytes for 8-byte alignment of double]
+            // offset 8: timestamp (Double)
+            // offset 16: pathIndex (Int32)
+            // offset 20: state (UInt32) [3 = MakeTouch, 4 = Touching]
+            // offset 24: fingerID (Int32)
+            // offset 28: handID (Int32)
+            // offset 32: normalizedVector.position.x (Float: 0.0=Left, 1.0=Right)
+            // offset 36: normalizedVector.position.y (Float: 0.0=Bottom, 1.0=Top)
+            let state = base.advanced(by: 20).assumingMemoryBound(to: UInt32.self).pointee
+            let fingerID = base.advanced(by: 24).assumingMemoryBound(to: Int32.self).pointee
+            let x = base.advanced(by: 32).assumingMemoryBound(to: Float.self).pointee
+            let y = base.advanced(by: 36).assumingMemoryBound(to: Float.self).pointee
 
             // States: 3 = MakeTouch, 4 = Touching
             if state == 3 || state == 4 {
                 current.append(TrackpadTouch(id: fingerID, x: x, y: y))
             }
         }
+        return current
+    }
 
+    fileprivate func handleFrame(touchPtr: UnsafeMutableRawPointer, numTouches: Int32) {
+        let current = MultitouchTracker.parseTouches(from: touchPtr, numTouches: numTouches)
+        let now = ProcessInfo.processInfo.systemUptime
         lock.lock()
+        self.lastFrameTime = now
         self._touches = current
         lock.unlock()
     }
 }
+
+

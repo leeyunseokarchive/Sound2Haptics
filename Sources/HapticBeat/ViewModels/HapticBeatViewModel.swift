@@ -60,8 +60,8 @@ public final class HapticBeatViewModel: ObservableObject {
             }
         }
 
-        // 30Hz lightweight touch cursor update for smooth UI tracking
-        touchTimer = Timer.scheduledTimer(withTimeInterval: 0.033, repeats: true) { [weak self] _ in
+        // 60Hz ultra-smooth touch cursor update for tactile responsiveness
+        touchTimer = Timer.scheduledTimer(withTimeInterval: 0.016, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 self.activeTouches = self.processor.touchTracker.touches

@@ -480,9 +480,13 @@ public struct TrackpadMatrixView: View {
                         .opacity(Double(0.4 + 0.6 * viewModel.lowEnergy))
 
                     // --- 4. LIVE MULTI-TOUCH FINGER CURSORS ---
+                    let margin: CGFloat = 16
+                    let trackWidth = max(1.0, w - margin * 2)
+                    let trackHeight = max(1.0, h - margin * 2)
+
                     ForEach(viewModel.activeTouches, id: \.id) { touch in
-                        let tx = CGFloat(touch.x) * w
-                        let ty = CGFloat(1.0 - touch.y) * h // Invert Y (Cocoa bottom-origin to SwiftUI top-origin)
+                        let tx = margin + CGFloat(touch.x) * trackWidth
+                        let ty = margin + CGFloat(1.0 - touch.y) * trackHeight // Invert Y (Cocoa bottom-origin to SwiftUI top-origin)
 
                         // Outer luminous touch target ring
                         Circle()
@@ -509,8 +513,8 @@ public struct TrackpadMatrixView: View {
 
                     // 5. Haptic Trigger Shockwave Ring (Synesthesia pulse!)
                     if viewModel.isHapticFlashing {
-                        let shockX = viewModel.activeTouches.first.map { CGFloat($0.x) * w } ?? lowX
-                        let shockY = viewModel.activeTouches.first.map { CGFloat(1.0 - $0.y) * h } ?? lowY
+                        let shockX = viewModel.activeTouches.first.map { margin + CGFloat($0.x) * trackWidth } ?? lowX
+                        let shockY = viewModel.activeTouches.first.map { margin + CGFloat(1.0 - $0.y) * trackHeight } ?? lowY
 
                         Circle()
                             .stroke(
@@ -518,6 +522,7 @@ public struct TrackpadMatrixView: View {
                                     colors: [.cyan, .white, .orange],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
+
                                 ),
                                 lineWidth: 2.5
                             )

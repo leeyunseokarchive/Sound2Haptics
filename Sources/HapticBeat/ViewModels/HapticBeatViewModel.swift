@@ -21,6 +21,7 @@ public final class HapticBeatViewModel: ObservableObject {
     @Published public var stereoPan: Float = 0.0
     @Published public var activeTouches: [TrackpadTouch] = []
     @Published public var isHapticFlashing: Bool = false
+    @Published public var lastTriggeredPattern: HapticPattern = .medium
     @Published public var triggerCount: Int = 0
     @Published public var hasPermission: Bool = true
     @Published public var errorMessage: String? = nil
@@ -34,10 +35,7 @@ public final class HapticBeatViewModel: ObservableObject {
 
     public init(config: HapticBeatConfig = HapticBeatConfig()) {
         self.config = config
-        let analyzer = AudioDSPAnalyzer(fftSize: 1024)
-        let engine = HapticEngine(config: config)
-        self.processor = AudioStreamProcessor(analyzer: analyzer, engine: engine)
-
+        self.processor = AudioStreamProcessor(engine: HapticEngine(config: config))
         setupCallbacks()
     }
 
@@ -68,10 +66,11 @@ public final class HapticBeatViewModel: ObservableObject {
             }
         }
 
-        processor.onHapticTrigger = { [weak self] _ in
+        processor.onHapticTrigger = { [weak self] pattern in
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.triggerCount += 1
+                self.lastTriggeredPattern = pattern
                 self.isHapticFlashing = true
                 self.flashTimer?.invalidate()
                 self.flashTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: false) { [weak self] _ in

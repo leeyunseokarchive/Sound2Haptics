@@ -8,7 +8,7 @@ public final class AudioStreamProcessor: @unchecked Sendable {
     public let touchTracker: TouchTrackingSource
 
     public var onAnalysis: (@Sendable (AudioAnalysisResult) -> Void)?
-    public var onHapticTrigger: (@Sendable (Bool) -> Void)?
+    public var onHapticTrigger: (@Sendable (HapticPattern) -> Void)?
 
     private var sampleAccumulator: [Float] = []
     private var currentStereoPan: Float = 0.0
@@ -46,7 +46,7 @@ public final class AudioStreamProcessor: @unchecked Sendable {
             let result = analyzer.process(samples: window, sampleRate: sampleRate, config: engine.config, stereoPan: pan)
 
             let touches = touchTracker.touches
-            var didActuate = false
+            var triggeredPattern: HapticPattern?
 
             let shouldTrigger: Bool
             if !touches.isEmpty {
@@ -59,7 +59,7 @@ public final class AudioStreamProcessor: @unchecked Sendable {
             }
 
             if shouldTrigger {
-                didActuate = engine.trigger(energy: result.bandEnergy)
+                triggeredPattern = engine.triggerWithPattern(energy: result.bandEnergy)
             }
 
             let onAnalysisCb = self.onAnalysis
@@ -67,8 +67,8 @@ public final class AudioStreamProcessor: @unchecked Sendable {
             lock.unlock()
 
             onAnalysisCb?(result)
-            if didActuate {
-                onHapticCb?(true)
+            if let pattern = triggeredPattern {
+                onHapticCb?(pattern)
             }
 
             lock.lock()

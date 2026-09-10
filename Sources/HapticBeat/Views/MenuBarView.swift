@@ -9,86 +9,118 @@ public struct MenuBarView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             // MARK: - Header
             HStack(spacing: 8) {
-                Image(systemName: "waveform.badge.magnifyingglass")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.cyan)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(Color.accentColor.opacity(0.12))
+                        .frame(width: 28, height: 28)
+
+                    Image(systemName: "waveform")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.accentColor)
+                }
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("HapticBeat")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                    Text("Trackpad Audio Haptics")
-                        .font(.caption2)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Text("Force Touch Audio Haptics")
+                        .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
 
                 Spacer()
 
-                // Beat pulse indicator
+                // Subtle beat flash indicator
                 Circle()
-                    .fill(viewModel.isHapticFlashing ? Color.cyan : Color.gray.opacity(0.3))
-                    .frame(width: 12, height: 12)
-                    .overlay(
-                        Circle()
-                            .stroke(viewModel.isHapticFlashing ? Color.cyan.opacity(0.8) : Color.clear, lineWidth: 3)
-                            .scaleEffect(viewModel.isHapticFlashing ? 1.8 : 1.0)
-                            .opacity(viewModel.isHapticFlashing ? 0.0 : 1.0)
-                            .animation(.easeOut(duration: 0.2), value: viewModel.isHapticFlashing)
-                    )
+                    .fill(viewModel.isHapticFlashing ? Color.accentColor : Color.primary.opacity(0.15))
+                    .frame(width: 7, height: 7)
+                    .scaleEffect(viewModel.isHapticFlashing ? 1.3 : 1.0)
+                    .animation(.easeOut(duration: 0.15), value: viewModel.isHapticFlashing)
 
                 Toggle("", isOn: $viewModel.config.isEnabled)
                     .labelsHidden()
                     .toggleStyle(.switch)
+                    .scaleEffect(0.85)
             }
             .padding(.bottom, 2)
 
-            // MARK: - 2D Trackpad Matrix Visualizer (Hero)
-            TrackpadMatrixView(viewModel: viewModel)
+            // MARK: - Apple-Style Virtual Trackpad
+            AppleTrackpadView(viewModel: viewModel)
 
-            // MARK: - Live Energy Meter & Threshold
-            VStack(alignment: .leading, spacing: 5) {
+            // MARK: - Live Energy & Dynamic Status Card
+            VStack(alignment: .leading, spacing: 8) {
+                // Header with dynamic intensity badge
                 HStack {
-                    Text("Band Energy")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 5) {
+                        Image(systemName: "waveform.badge.magnifyingglass")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Text("Dynamic Response")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+
                     Spacer()
-                    Text(String(format: "%.0f%% / Threshold: %.0f%%", viewModel.currentBandEnergy * 100, viewModel.config.threshold * 100))
-                        .font(.caption2)
-                        .monospacedDigit()
-                        .foregroundColor(.secondary)
+
+                    // Real-time triggered tier badge
+                    Text(viewModel.lastTriggeredPattern.displayName.uppercased())
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(viewModel.isHapticFlashing ? .primary : .secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(viewModel.isHapticFlashing ? Color.accentColor.opacity(0.2) : Color.primary.opacity(0.06))
+                        )
                 }
 
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        // Background track
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.primary.opacity(0.08))
+                // Clean Apple Energy Meter with Threshold marker
+                VStack(alignment: .leading, spacing: 4) {
+                    GeometryReader { geo in
+                        let w = geo.size.width
+                        let h = geo.size.height
 
-                        // Live energy fill
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(
-                                LinearGradient(
-                                    colors: [.cyan.opacity(0.7), .blue, .purple],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(width: max(0, min(geo.size.width, geo.size.width * CGFloat(viewModel.currentBandEnergy))))
-                            .animation(.interactiveSpring(response: 0.1, dampingFraction: 0.8), value: viewModel.currentBandEnergy)
+                        ZStack(alignment: .leading) {
+                            // Track
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.primary.opacity(0.06))
 
-                        // Threshold marker line
-                        Rectangle()
-                            .fill(Color.orange)
-                            .frame(width: 2, height: geo.size.height)
-                            .offset(x: geo.size.width * CGFloat(viewModel.config.threshold))
+                            // Live energy fill
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color.accentColor.opacity(0.85))
+                                .frame(width: max(0, min(w, w * CGFloat(viewModel.currentBandEnergy))))
+                                .animation(.interactiveSpring(response: 0.1, dampingFraction: 0.8), value: viewModel.currentBandEnergy)
+
+                            // Threshold hairline notch
+                            Rectangle()
+                                .fill(Color.primary.opacity(0.6))
+                                .frame(width: 1.5, height: h)
+                                .offset(x: max(0, min(w - 1.5, w * CGFloat(viewModel.config.threshold))))
+                        }
+                    }
+                    .frame(height: 5)
+
+                    HStack {
+                        Text(String(format: "Energy: %.0f%%", viewModel.currentBandEnergy * 100))
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(String(format: "Threshold: %.0f%%", viewModel.config.threshold * 100))
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
+                            .foregroundColor(.secondary)
                     }
                 }
-                .frame(height: 10)
             }
+            .padding(10)
+            .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+            )
 
             // MARK: - Capture Button
             Button(action: {
@@ -96,145 +128,135 @@ public struct MenuBarView: View {
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: viewModel.isCapturing ? "stop.circle.fill" : "record.circle")
-                        .foregroundColor(viewModel.isCapturing ? .red : .green)
-                    Text(viewModel.isCapturing ? "Stop System Capture" : "Start System Capture")
-                        .fontWeight(.semibold)
+                    Text(viewModel.isCapturing ? "Stop Audio Capture" : "Start Audio Capture")
+                        .font(.system(size: 12, weight: .medium))
                 }
                 .frame(maxWidth: .infinity)
+                .frame(height: 26)
             }
             .buttonStyle(.borderedProminent)
-            .tint(viewModel.isCapturing ? .red.opacity(0.8) : .blue)
+            .tint(viewModel.isCapturing ? Color.red.opacity(0.85) : Color.accentColor)
 
             // MARK: - Permission Warning Banner
             if !viewModel.hasPermission {
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 5) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.orange)
-                        Text("Screen & Audio Permission Required")
-                            .font(.caption)
-                            .fontWeight(.bold)
+                            .font(.system(size: 11))
+                        Text("Screen & Audio Recording Permission Required")
+                            .font(.system(size: 11, weight: .semibold))
                     }
-                    Text("macOS requires screen/audio recording permission to capture system sound.")
-                        .font(.caption2)
+                    Text("macOS requires system recording permission to capture audio.")
+                        .font(.system(size: 10))
                         .foregroundColor(.secondary)
 
                     Button("Open System Settings") {
                         viewModel.openPrivacySettings()
                     }
-                    .font(.caption)
+                    .font(.system(size: 10))
                     .buttonStyle(.bordered)
                 }
                 .padding(8)
-                .background(Color.orange.opacity(0.12))
-                .cornerRadius(6)
+                .background(Color.orange.opacity(0.1))
+                .cornerRadius(8)
             }
 
-            Divider()
-
-            // MARK: - Target Frequency Band
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Target Frequency Band")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(viewModel.config.frequencyBand.rangeDescription)
-                        .font(.caption2)
-                        .foregroundColor(.cyan)
-                }
-
-                Picker("Band", selection: $viewModel.config.frequencyBand) {
-                    ForEach(FrequencyBand.allCases, id: \.self) { band in
-                        Text(band.shortName).tag(band)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
-            }
-
-            // MARK: - Threshold Slider
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("Threshold (Sensitivity)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(String(format: "%.0f%%", viewModel.config.threshold * 100))
-                        .font(.caption2)
-                        .monospacedDigit()
-                }
-                Slider(value: $viewModel.config.threshold, in: 0.05...0.95, step: 0.05)
-            }
-
-            // MARK: - Input Gain (Volume) Slider
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    HStack(spacing: 4) {
-                        Image(systemName: "speaker.wave.2.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.cyan)
-                        Text("Input Gain (Volume)")
-                            .font(.caption)
+            // MARK: - Controls Group Card (Bento Style)
+            VStack(spacing: 10) {
+                // Target Frequency Band
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack {
+                        Text("Frequency Focus")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(viewModel.config.frequencyBand.rangeDescription)
+                            .font(.system(size: 9, weight: .medium, design: .monospaced))
                             .foregroundColor(.secondary)
                     }
-                    Spacer()
-                    Text(String(format: "%.0f%% (%.1fx)", viewModel.config.inputGain * 100, viewModel.config.inputGain))
-                        .font(.caption2)
-                        .monospacedDigit()
-                        .foregroundColor(viewModel.config.inputGain > 1.2 ? .orange : .secondary)
+
+                    Picker("Band", selection: $viewModel.config.frequencyBand) {
+                        ForEach(FrequencyBand.allCases, id: \.self) { band in
+                            Text(band.shortName).tag(band)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
                 }
-                Slider(value: $viewModel.config.inputGain, in: 0.10...2.0, step: 0.05)
 
-                Text("Scale loud music down to avoid saturation, or boost quiet tracks.")
-                    .font(.system(size: 10))
-                    .foregroundColor(.secondary.opacity(0.8))
+                Divider()
+                    .opacity(0.5)
+
+                // Sensitivity (Threshold)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text("Sensitivity")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(String(format: "%.0f%%", viewModel.config.threshold * 100))
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundColor(.primary)
+                    }
+                    Slider(value: $viewModel.config.threshold, in: 0.05...0.95, step: 0.05)
+                        .controlSize(.small)
+                }
+
+                Divider()
+                    .opacity(0.5)
+
+                // Input Level (Gain)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        HStack(spacing: 4) {
+                            Image(systemName: "speaker.wave.2")
+                                .font(.system(size: 10))
+                                .foregroundColor(.secondary)
+                            Text("Input Level")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Text(String(format: "%.1fx", viewModel.config.inputGain))
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundColor(.primary)
+                    }
+                    Slider(value: $viewModel.config.inputGain, in: 0.10...2.0, step: 0.05)
+                        .controlSize(.small)
+                }
             }
-
-            // MARK: - Dynamic Haptic Response Status
-            HStack(spacing: 6) {
-                Image(systemName: "waveform.badge.magnifyingglass")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.cyan)
-                Text("Dynamic Volume Response")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text(viewModel.lastTriggeredPattern.displayName.uppercased())
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundColor(.cyan)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.cyan.opacity(0.12))
-                    .cornerRadius(4)
-            }
-            .padding(.vertical, 2)
-
-            Divider()
+            .padding(10)
+            .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+            )
 
             // MARK: - Footer Actions
             HStack(spacing: 8) {
                 Button(action: {
                     viewModel.testHapticClick()
                 }) {
-                    Label("Test Click", systemImage: "hand.tap")
-                        .font(.caption)
+                    Label("Test Tap", systemImage: "hand.tap")
+                        .font(.system(size: 10, weight: .medium))
                 }
                 .buttonStyle(.bordered)
+                .controlSize(.small)
 
                 if viewModel.triggerCount > 0 {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 3) {
                         Image(systemName: "bolt.fill")
-                            .font(.system(size: 9))
-                            .foregroundColor(.yellow)
-                        Text("Beats: \(viewModel.triggerCount)")
-                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .font(.system(size: 8))
+                            .foregroundColor(.accentColor)
+                        Text("\(viewModel.triggerCount)")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
                             .foregroundColor(.secondary)
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Color.white.opacity(0.06))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2.5)
+                    .background(Color.primary.opacity(0.04))
                     .cornerRadius(4)
                 }
 
@@ -243,19 +265,19 @@ public struct MenuBarView: View {
                 Button("Quit") {
                     NSApplication.shared.terminate(nil)
                 }
-                .font(.caption)
+                .font(.system(size: 10))
                 .buttonStyle(.plain)
                 .foregroundColor(.secondary)
             }
+            .padding(.top, 2)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 16)
-        .frame(width: 360)
+        .padding(14)
+        .frame(width: 340)
     }
 }
 
-// MARK: - 2D Trackpad Matrix Visualizer (Option 1: Organic Glow Radar)
-public struct TrackpadMatrixView: View {
+// MARK: - Apple-Style Realistic Virtual Trackpad
+public struct AppleTrackpadView: View {
     @ObservedObject var viewModel: HapticBeatViewModel
 
     public init(viewModel: HapticBeatViewModel) {
@@ -264,58 +286,54 @@ public struct TrackpadMatrixView: View {
 
     public var body: some View {
         VStack(spacing: 6) {
-            // Header Bar
-            HStack {
+            // Trackpad Top Bar
+            HStack(alignment: .center) {
                 HStack(spacing: 5) {
-                    Image(systemName: "rectangle.portrait.and.arrow.forward")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.cyan)
-                    Text("TRACKPAD MATRIX")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    Image(systemName: "hand.point.up.left")
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.secondary)
-
-                    // Dynamic Tag
-                    Text("DYNAMIC")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundColor(.cyan)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1.5)
-                        .background(Color.cyan.opacity(0.12))
-                        .cornerRadius(3)
+                    Text("Trackpad")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
                 }
 
                 Spacer()
 
-                // Real-time Touch Status Badge
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(viewModel.activeTouches.isEmpty ? Color.gray.opacity(0.4) : Color.green)
-                        .frame(width: 5, height: 5)
-                    Text(viewModel.activeTouches.isEmpty ? "NO TOUCH" : "\(viewModel.activeTouches.count) TOUCH\(viewModel.activeTouches.count > 1 ? "ES" : "")")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundColor(viewModel.activeTouches.isEmpty ? .secondary : .green)
+                // Touch Count Badge
+                if !viewModel.activeTouches.isEmpty {
+                    HStack(spacing: 3) {
+                        Circle()
+                            .fill(Color.accentColor)
+                            .frame(width: 4, height: 4)
+                        Text("\(viewModel.activeTouches.count) Touch\(viewModel.activeTouches.count > 1 ? "es" : "")")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.accentColor.opacity(0.12))
+                    .cornerRadius(4)
+                } else {
+                    Text("No Touch")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.secondary.opacity(0.6))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.primary.opacity(0.03))
+                        .cornerRadius(4)
                 }
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
-                .background(viewModel.activeTouches.isEmpty ? Color.white.opacity(0.04) : Color.green.opacity(0.12))
-                .cornerRadius(4)
 
-                // Real-time Stereo Panning Readout
-                HStack(spacing: 4) {
-                    Text("PAN")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundColor(.secondary)
-                    Text(panText)
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                        .foregroundColor(abs(viewModel.stereoPan) < 0.1 ? .secondary : .cyan)
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color.white.opacity(0.06))
-                .cornerRadius(4)
+                // Stereo Balance readout
+                Text(panText)
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.primary.opacity(0.03))
+                    .cornerRadius(4)
             }
 
-            // Trackpad Visual Surface
+            // Realistic Trackpad Surface
             GeometryReader { geo in
                 let w = geo.size.width
                 let h = geo.size.height
@@ -323,261 +341,176 @@ public struct TrackpadMatrixView: View {
                 let panOffset = CGFloat(viewModel.stereoPan) * (w * 0.35)
 
                 ZStack {
-                    // Dark matte glass surface
-                    RoundedRectangle(cornerRadius: 12)
+                    // 1. Unibody Aluminum Base & Shadow
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(Color(white: 0.18))
+                        .shadow(color: Color.black.opacity(0.22), radius: 6, x: 0, y: 2)
+
+                    // 2. Matte Glass Touchpad Surface
+                    RoundedRectangle(cornerRadius: 13)
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color(red: 0.08, green: 0.09, blue: 0.13),
-                                    Color(red: 0.05, green: 0.06, blue: 0.09)
+                                    Color(white: 0.13),
+                                    Color(white: 0.10)
                                 ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                                startPoint: .top,
+                                endPoint: .bottom
                             )
                         )
+                        .padding(1)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(
-                                    viewModel.isHapticFlashing
-                                        ? Color.cyan.opacity(0.8)
-                                        : Color.white.opacity(0.12),
-                                    lineWidth: viewModel.isHapticFlashing ? 1.5 : 1.0
-                                )
-                                .animation(.easeOut(duration: 0.2), value: viewModel.isHapticFlashing)
+                            RoundedRectangle(cornerRadius: 13)
+                                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+                                .padding(1)
                         )
 
-                    // Frequency Zone Labels & Grid
+                    // 3. Subtle Apple Acoustic Zone Meters (Clean monochrome levels)
                     VStack(spacing: 0) {
-                        // High band zone (Top)
+                        // High band zone
                         HStack {
-                            Text("HIGH · TREBLE")
-                                .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                .foregroundColor(.cyan.opacity(0.7))
+                            Text("Treble")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundColor(.secondary.opacity(0.7))
                             Spacer()
-                            Text(String(format: "%.0f%%", viewModel.highEnergy * 100))
-                                .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                                .foregroundColor(.cyan.opacity(0.7))
+                            AcousticLevelPill(energy: viewModel.highEnergy)
                         }
                         .padding(.horizontal, 10)
                         .padding(.top, 6)
 
                         Spacer()
 
-                        // Mid band zone (Center)
+                        // Mid band zone
                         HStack {
-                            Text("MID · VOCALS")
-                                .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                .foregroundColor(Color(red: 0.7, green: 0.5, blue: 1.0).opacity(0.7))
+                            Text("Vocals")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundColor(.secondary.opacity(0.7))
                             Spacer()
-                            Text(String(format: "%.0f%%", viewModel.midEnergy * 100))
-                                .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                                .foregroundColor(Color(red: 0.7, green: 0.5, blue: 1.0).opacity(0.7))
+                            AcousticLevelPill(energy: viewModel.midEnergy)
                         }
                         .padding(.horizontal, 10)
 
                         Spacer()
 
-                        // Low band zone (Bottom)
+                        // Low band zone
                         HStack {
-                            Text("LOW · BASS")
-                                .font(.system(size: 8, weight: .bold, design: .monospaced))
-                                .foregroundColor(.orange.opacity(0.85))
+                            Text("Bass")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundColor(.secondary.opacity(0.7))
                             Spacer()
-                            Text(String(format: "%.0f%%", viewModel.lowEnergy * 100))
-                                .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                                .foregroundColor(.orange.opacity(0.85))
+                            AcousticLevelPill(energy: viewModel.lowEnergy)
                         }
                         .padding(.horizontal, 10)
                         .padding(.bottom, 6)
                     }
 
-                    // Tactical reticle crosshair and guide lines
-                    Path { path in
-                        // Center crosshair
-                        path.move(to: CGPoint(x: centerX - 8, y: h * 0.5))
-                        path.addLine(to: CGPoint(x: centerX + 8, y: h * 0.5))
-                        path.move(to: CGPoint(x: centerX, y: h * 0.5 - 8))
-                        path.addLine(to: CGPoint(x: centerX, y: h * 0.5 + 8))
-
-                        // High line guide
-                        path.move(to: CGPoint(x: 12, y: h * 0.33))
-                        path.addLine(to: CGPoint(x: w - 12, y: h * 0.33))
-
-                        // Low line guide
-                        path.move(to: CGPoint(x: 12, y: h * 0.67))
-                        path.addLine(to: CGPoint(x: w - 12, y: h * 0.67))
-                    }
-                    .stroke(Color.white.opacity(0.06), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-
-                    // Left & Right stereo boundary markers
-                    HStack {
-                        Text("L")
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
-                            .foregroundColor(viewModel.stereoPan < -0.2 ? .cyan : Color.white.opacity(0.2))
-                            .padding(.leading, 8)
-                        Spacer()
-                        Text("R")
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
-                            .foregroundColor(viewModel.stereoPan > 0.2 ? .cyan : Color.white.opacity(0.2))
-                            .padding(.trailing, 8)
-                    }
-
-                    // --- ORGANIC GLOW ORBS ---
-
-                    // 1. High Frequency Node (Treble / Neon Cyan)
-                    let highX = centerX + panOffset * 0.7
-                    let highY = h * 0.22
-                    let highScale = CGFloat(max(0.1, viewModel.highEnergy))
-                    Circle()
-                        .fill(Color.cyan)
-                        .frame(width: 14 + 30 * highScale, height: 14 + 30 * highScale)
-                        .blur(radius: 7 + 8 * highScale)
-                        .opacity(Double(0.2 + 0.8 * viewModel.highEnergy))
-                        .position(x: highX, y: highY)
-                        .animation(.interactiveSpring(response: 0.12, dampingFraction: 0.75), value: viewModel.highEnergy)
-                        .animation(.interactiveSpring(response: 0.15, dampingFraction: 0.8), value: viewModel.stereoPan)
-
-                    Circle()
-                        .fill(Color.white.opacity(0.85))
-                        .frame(width: 4 + 4 * highScale, height: 4 + 4 * highScale)
-                        .position(x: highX, y: highY)
-                        .opacity(Double(0.3 + 0.7 * viewModel.highEnergy))
-
-                    // 2. Mid Frequency Node (Vocals / Purple-Indigo)
-                    let midX = centerX + panOffset * 0.85
-                    let midY = h * 0.50
-                    let midScale = CGFloat(max(0.1, viewModel.midEnergy))
-                    Circle()
-                        .fill(Color(red: 0.65, green: 0.35, blue: 1.0))
-                        .frame(width: 18 + 40 * midScale, height: 18 + 40 * midScale)
-                        .blur(radius: 9 + 10 * midScale)
-                        .opacity(Double(0.2 + 0.8 * viewModel.midEnergy))
-                        .position(x: midX, y: midY)
-                        .animation(.interactiveSpring(response: 0.12, dampingFraction: 0.75), value: viewModel.midEnergy)
-                        .animation(.interactiveSpring(response: 0.15, dampingFraction: 0.8), value: viewModel.stereoPan)
-
-                    Circle()
-                        .fill(Color.white.opacity(0.85))
-                        .frame(width: 5 + 5 * midScale, height: 5 + 5 * midScale)
-                        .position(x: midX, y: midY)
-                        .opacity(Double(0.3 + 0.7 * viewModel.midEnergy))
-
-                    // 3. Low Frequency Node (Bass / Warm Amber-Orange)
-                    let lowX = centerX + panOffset
-                    let lowY = h * 0.78
-                    let lowScale = CGFloat(max(0.1, viewModel.lowEnergy))
+                    // 4. Subtle Ambient Acoustic Glass Glow (shifts gracefully with Stereo Pan)
+                    let totalScale = CGFloat(max(0.05, viewModel.currentTotalEnergy))
                     Circle()
                         .fill(
                             RadialGradient(
                                 colors: [
-                                    Color(red: 1.0, green: 0.5, blue: 0.1),
-                                    Color(red: 0.9, green: 0.2, blue: 0.0).opacity(0.4)
+                                    Color.white.opacity(Double(0.08 + 0.18 * viewModel.currentBandEnergy)),
+                                    Color.white.opacity(0.0)
                                 ],
                                 center: .center,
                                 startRadius: 2,
-                                endRadius: 28
+                                endRadius: 50
                             )
                         )
-                        .frame(width: 22 + 52 * lowScale, height: 22 + 52 * lowScale)
-                        .blur(radius: 10 + 12 * lowScale)
-                        .opacity(Double(0.25 + 0.75 * viewModel.lowEnergy))
-                        .position(x: lowX, y: lowY)
-                        .animation(.interactiveSpring(response: 0.1, dampingFraction: 0.75), value: viewModel.lowEnergy)
+                        .frame(width: 40 + 80 * totalScale, height: 40 + 80 * totalScale)
+                        .position(x: centerX + panOffset, y: h * 0.5)
                         .animation(.interactiveSpring(response: 0.15, dampingFraction: 0.8), value: viewModel.stereoPan)
+                        .animation(.interactiveSpring(response: 0.12, dampingFraction: 0.8), value: viewModel.currentTotalEnergy)
 
-                    Circle()
-                        .fill(Color.white.opacity(0.9))
-                        .frame(width: 6 + 6 * lowScale, height: 6 + 6 * lowScale)
-                        .position(x: lowX, y: lowY)
-                        .opacity(Double(0.4 + 0.6 * viewModel.lowEnergy))
-
-                    // --- 4. LIVE MULTI-TOUCH FINGER CURSORS ---
+                    // 5. Native Apple Pointer Touch Cursors (Frosted Glass Disc)
                     let margin: CGFloat = 16
                     let trackWidth = max(1.0, w - margin * 2)
                     let trackHeight = max(1.0, h - margin * 2)
 
                     ForEach(viewModel.activeTouches, id: \.id) { touch in
                         let tx = margin + CGFloat(touch.x) * trackWidth
-                        let ty = margin + CGFloat(1.0 - touch.y) * trackHeight // Invert Y (Cocoa bottom-origin to SwiftUI top-origin)
+                        let ty = margin + CGFloat(1.0 - touch.y) * trackHeight
 
-                        // Outer luminous touch target ring
+                        // Frosted translucent glass disc with soft drop shadow
                         Circle()
-                            .stroke(
-                                RadialGradient(
-                                    colors: [.white, .cyan.opacity(0.6)],
-                                    center: .center,
-                                    startRadius: 4,
-                                    endRadius: 18
-                                ),
-                                lineWidth: 1.5
+                            .fill(Color.white.opacity(0.28))
+                            .frame(width: 24, height: 24)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white.opacity(0.85), lineWidth: 1.2)
                             )
-                            .frame(width: 32, height: 32)
+                            .shadow(color: Color.black.opacity(0.35), radius: 3, y: 1.5)
                             .position(x: tx, y: ty)
-                            .shadow(color: .cyan.opacity(0.8), radius: 6)
 
-                        // Inner white touch contact point
+                        // Center white tactile core
                         Circle()
                             .fill(Color.white)
-                            .frame(width: 8, height: 8)
+                            .frame(width: 5, height: 5)
                             .position(x: tx, y: ty)
-                            .shadow(color: .white, radius: 4)
                     }
 
-                    // 5. Haptic Trigger Shockwave Ring (Synesthesia pulse!)
+                    // 6. Refined Apple Haptic Glass Ripple (Expanding clean focus ring)
                     if viewModel.isHapticFlashing {
-                        let shockX = viewModel.activeTouches.first.map { margin + CGFloat($0.x) * trackWidth } ?? lowX
-                        let shockY = viewModel.activeTouches.first.map { margin + CGFloat(1.0 - $0.y) * trackHeight } ?? lowY
+                        let shockX = viewModel.activeTouches.first.map { margin + CGFloat($0.x) * trackWidth } ?? (centerX + panOffset)
+                        let shockY = viewModel.activeTouches.first.map { margin + CGFloat(1.0 - $0.y) * trackHeight } ?? (h * 0.72)
 
                         let (baseSize, strokeW, scaleEnd): (CGFloat, CGFloat, CGFloat) = {
                             switch viewModel.lastTriggeredPattern {
                             case .light:
-                                return (60, 1.5, 1.3)
+                                return (45, 1.2, 1.3)
                             case .medium:
-                                return (95, 2.5, 1.6)
+                                return (75, 1.8, 1.6)
                             case .strong:
-                                return (135, 3.5, 2.0)
+                                return (105, 2.4, 2.0)
                             }
                         }()
 
                         Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: viewModel.lastTriggeredPattern == .strong
-                                        ? [.orange, .yellow, .white]
-                                        : [.cyan, .white, .orange],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: strokeW
-                            )
+                            .stroke(Color.white.opacity(0.85), lineWidth: strokeW)
                             .frame(width: baseSize, height: baseSize)
                             .position(x: shockX, y: shockY)
-                            .scaleEffect(viewModel.isHapticFlashing ? scaleEnd : 0.5)
-                            .opacity(viewModel.isHapticFlashing ? 0.0 : 0.95)
-                            .animation(.easeOut(duration: 0.25), value: viewModel.isHapticFlashing)
+                            .scaleEffect(viewModel.isHapticFlashing ? scaleEnd : 0.6)
+                            .opacity(viewModel.isHapticFlashing ? 0.0 : 0.85)
+                            .animation(.easeOut(duration: 0.22), value: viewModel.isHapticFlashing)
                     }
-
                 }
             }
-            .frame(height: 135)
+            .frame(height: 125)
         }
         .padding(10)
-        .background(Color.white.opacity(0.03))
-        .cornerRadius(14)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.4))
+        .cornerRadius(12)
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
         )
     }
 
     private var panText: String {
         let p = viewModel.stereoPan
         if abs(p) < 0.05 {
-            return "CENTER"
+            return "Center"
         } else if p < 0 {
             return String(format: "L %.0f%%", abs(p) * 100)
         } else {
             return String(format: "R %.0f%%", p * 100)
+        }
+    }
+}
+
+// MARK: - Clean 4-segment Acoustic Level Pill (macOS Sound bar style)
+private struct AcousticLevelPill: View {
+    let energy: Float
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(0..<4) { index in
+                let threshold = Float(index + 1) * 0.25
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(energy >= threshold ? Color.primary.opacity(0.75) : Color.primary.opacity(0.12))
+                    .frame(width: 3, height: 6)
+            }
         }
     }
 }

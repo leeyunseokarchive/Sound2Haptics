@@ -1,5 +1,5 @@
 import SwiftUI
-import HapticBeatCore
+import Sound2HapticsCore
 
 public struct MenuBarView: View {
     @ObservedObject var viewModel: HapticBeatViewModel
@@ -23,7 +23,7 @@ public struct MenuBarView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("HapticBeat")
+                    Text("Sound2Haptics")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.primary)
                     Text("Force Touch Audio Haptics")

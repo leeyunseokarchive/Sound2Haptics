@@ -1,5 +1,5 @@
 import XCTest
-@testable import HapticBeatCore
+@testable import Sound2HapticsCore
 
 final class HapticEngineTests: XCTestCase {
     func testTriggerWithMockActuator() {

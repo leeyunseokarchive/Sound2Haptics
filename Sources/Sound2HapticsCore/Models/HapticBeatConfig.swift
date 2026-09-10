@@ -68,6 +68,8 @@ public enum HapticPattern: String, CaseIterable, Sendable {
     }
 }
 
+public typealias Sound2HapticsConfig = HapticBeatConfig
+
 public struct HapticBeatConfig: Sendable {
     public var isEnabled: Bool
 

@@ -1,5 +1,5 @@
 import XCTest
-@testable import HapticBeatCore
+@testable import Sound2HapticsCore
 
 private final class TestCollector<T>: @unchecked Sendable {
     private var values: [T] = []

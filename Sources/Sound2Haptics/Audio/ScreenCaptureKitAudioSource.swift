@@ -3,7 +3,7 @@ import ScreenCaptureKit
 import CoreMedia
 import AVFoundation
 import CoreAudio
-import HapticBeatCore
+import Sound2HapticsCore
 
 public final class ScreenCaptureKitAudioSource: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     private let processor: AudioStreamProcessor

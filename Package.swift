@@ -2,32 +2,32 @@
 import PackageDescription
 
 let package = Package(
-    name: "HapticBeat",
+    name: "Sound2Haptics",
     platforms: [
         .macOS(.v13)
     ],
     products: [
         .library(
-            name: "HapticBeatCore",
-            targets: ["HapticBeatCore"]
+            name: "Sound2HapticsCore",
+            targets: ["Sound2HapticsCore"]
         ),
         .executable(
-            name: "HapticBeat",
-            targets: ["HapticBeat"]
+            name: "Sound2Haptics",
+            targets: ["Sound2Haptics"]
         )
     ],
     targets: [
         .target(
-            name: "HapticBeatCore",
+            name: "Sound2HapticsCore",
             dependencies: []
         ),
         .executableTarget(
-            name: "HapticBeat",
-            dependencies: ["HapticBeatCore"]
+            name: "Sound2Haptics",
+            dependencies: ["Sound2HapticsCore"]
         ),
         .testTarget(
-            name: "HapticBeatCoreTests",
-            dependencies: ["HapticBeatCore"]
+            name: "Sound2HapticsCoreTests",
+            dependencies: ["Sound2HapticsCore"]
         )
     ]
 )

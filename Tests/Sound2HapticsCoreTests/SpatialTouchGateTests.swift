@@ -1,5 +1,5 @@
 import XCTest
-@testable import HapticBeatCore
+@testable import Sound2HapticsCore
 
 final class SpatialTouchGateTests: XCTestCase {
     let config = HapticBeatConfig(threshold: 0.25)

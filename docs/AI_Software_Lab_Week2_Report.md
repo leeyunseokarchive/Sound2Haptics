@@ -158,16 +158,25 @@ AI 에이전트와 체계적인 엔지니어링 절차(TDD, Spec 구체화, 하�
   - 폭 340px의 표준 macOS 팝오버 규격에 맞춰 컨트롤들을 둥근 시스템 인셋 카드(`controlBackgroundColor`)로 논리적 그룹화했습니다.
   - 슬라이더 및 스위치 컨트롤을 컴팩트(`controlSize(.small)`)하게 다듬고, 불필요한 색상 강조를 제거하여 최신 macOS Sequoia/Sonoma 시스템 설정과 완벽한 일체감을 완성했습니다.
 
+### 해결 11: 브랜드 아이덴티티 확립 — 프로젝트명 리브랜딩(`Sound2Haptics`) 및 IP 캐릭터 로고(`ip-as-logo`) 구축
+- **리브랜딩 배경**: 단순 비트 감지를 넘어 실시간 전대역 사운드를 촉각(Haptics)으로 변환하는 직관적인 정체성을 담기 위해 프로젝트 및 실행 파일 명칭을 `Sound2Haptics`로 공식 개명했습니다.
+- **`ip-as-logo` 스킬 기반 마스코트 로고 생성**:
+  - 트랙패드를 만지는 손끝과 부드러운 촉각을 상징하는 **'트랙패드 냥이 (A1 — Slate & Cream)'**를 공식 마스코트 로고로 선정하고 고해상도 애셋(`assets/logo.png`)을 구축했습니다.
+- **오픈소스 리드미 및 시연 애셋 자동화**:
+  - `ImageIO` 및 `NSHostingView` 네이티브 렌더링을 활용해 무한 루프 시연 애니메이션(`assets/demo.gif`), 고해상도 UI 프리뷰(`assets/ui_preview.png`), 트랙패드 디테일 컷(`assets/trackpad_preview.png`)을 코드베이스 레벨에서 자동 생성(`--export-assets`)했습니다.
+  - 깃허브 표준 저장소 형태의 고품질 바이링구얼 문서(`README.md`, `README.en.md`)를 작성했습니다.
+
 ---
 
 ## 5. 검증 결과 및 산출물 요약
 
 | 검증 항목 | 검증 명령어 | 결과 | 비고 |
 |---|---|---|---|
-| **TDD 단위 테스트** | `swift test` | **36 / 36 통과 (0.027초)** | 동적 햅틱 강도, 멀티터치 C ABI, 공간 터치 게이팅 검증 완료 |
+| **TDD 단위 테스트** | `swift test` | **36 / 36 통과 (0.025초)** | 동적 햅틱 강도, 멀티터치 C ABI, 공간 터치 게이팅 검증 완료 |
 | **빌드 안정성** | `swift build` | **Exit code 0 (빌드 성공)** | Swift 6 엄격한 동시성(Sendable) 경고 0건 |
-| **물리 하드웨어 테스트** | `swift run HapticBeat --test-actuator` | **SUCCESS (Clicked)** | 맥북 트랙패드 햅틱 액추에이터 실제 동작 확인 |
-| **파이프라인 시뮬레이션** | `swift run HapticBeat --demo-dsp` | **SUCCESS (2 beats actuated)** | 2D 공간 텔레메트리(Low, Mid, High, Pan) 정상 산출 확인 |
+| **물리 하드웨어 테스트** | `swift run Sound2Haptics --test-actuator` | **SUCCESS (Clicked)** | 맥북 트랙패드 햅틱 액추에이터 실제 동작 확인 |
+| **파이프라인 시뮬레이션** | `swift run Sound2Haptics --demo-dsp` | **SUCCESS (2 beats actuated)** | 2D 공간 텔레메트리(Low, Mid, High, Pan) 정상 산출 확인 |
+| **애셋 렌더링 자동화** | `swift run Sound2Haptics --export-assets` | **SUCCESS (3 files exported)** | UI 프리뷰, 트랙패드 컷, 무한 루프 데모 GIF 생성 완료 |
 
 ---
 

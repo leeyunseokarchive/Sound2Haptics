@@ -2,7 +2,9 @@ import Foundation
 import SwiftUI
 import Combine
 import AppKit
-import HapticBeatCore
+import Sound2HapticsCore
+
+public typealias Sound2HapticsViewModel = HapticBeatViewModel
 
 @MainActor
 public final class HapticBeatViewModel: ObservableObject {

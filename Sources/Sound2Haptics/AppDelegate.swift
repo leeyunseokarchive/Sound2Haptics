@@ -15,7 +15,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         // Configure Status Bar Item
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            button.image = NSImage(systemSymbolName: "waveform.circle.fill", accessibilityDescription: "HapticBeat")
+            button.image = NSImage(systemSymbolName: "waveform.circle.fill", accessibilityDescription: "Sound2Haptics")
             button.action = #selector(togglePopover(_:))
             button.target = self
         }
@@ -32,7 +32,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         pop.contentSize = NSSize(width: max(350, fitting.width), height: max(480, fitting.height))
         self.popover = pop
 
-        print("HapticBeat menu bar application running.")
+        print("Sound2Haptics menu bar application running.")
     }
 
     @objc private func togglePopover(_ sender: AnyObject?) {

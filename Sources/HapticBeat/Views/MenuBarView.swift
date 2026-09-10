@@ -274,6 +274,20 @@ public struct TrackpadMatrixView: View {
 
                 Spacer()
 
+                // Real-time Touch Status Badge
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(viewModel.activeTouches.isEmpty ? Color.gray.opacity(0.4) : Color.green)
+                        .frame(width: 5, height: 5)
+                    Text(viewModel.activeTouches.isEmpty ? "NO TOUCH" : "\(viewModel.activeTouches.count) TOUCH\(viewModel.activeTouches.count > 1 ? "ES" : "")")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundColor(viewModel.activeTouches.isEmpty ? .secondary : .green)
+                }
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(viewModel.activeTouches.isEmpty ? Color.white.opacity(0.04) : Color.green.opacity(0.12))
+                .cornerRadius(4)
+
                 // Real-time Stereo Panning Readout
                 HStack(spacing: 4) {
                     Text("PAN")
@@ -465,8 +479,39 @@ public struct TrackpadMatrixView: View {
                         .position(x: lowX, y: lowY)
                         .opacity(Double(0.4 + 0.6 * viewModel.lowEnergy))
 
-                    // 4. Haptic Trigger Shockwave Ring
+                    // --- 4. LIVE MULTI-TOUCH FINGER CURSORS ---
+                    ForEach(viewModel.activeTouches, id: \.id) { touch in
+                        let tx = CGFloat(touch.x) * w
+                        let ty = CGFloat(1.0 - touch.y) * h // Invert Y (Cocoa bottom-origin to SwiftUI top-origin)
+
+                        // Outer luminous touch target ring
+                        Circle()
+                            .stroke(
+                                RadialGradient(
+                                    colors: [.white, .cyan.opacity(0.6)],
+                                    center: .center,
+                                    startRadius: 4,
+                                    endRadius: 18
+                                ),
+                                lineWidth: 1.5
+                            )
+                            .frame(width: 32, height: 32)
+                            .position(x: tx, y: ty)
+                            .shadow(color: .cyan.opacity(0.8), radius: 6)
+
+                        // Inner white touch contact point
+                        Circle()
+                            .fill(Color.white)
+                            .frame(width: 8, height: 8)
+                            .position(x: tx, y: ty)
+                            .shadow(color: .white, radius: 4)
+                    }
+
+                    // 5. Haptic Trigger Shockwave Ring (Synesthesia pulse!)
                     if viewModel.isHapticFlashing {
+                        let shockX = viewModel.activeTouches.first.map { CGFloat($0.x) * w } ?? lowX
+                        let shockY = viewModel.activeTouches.first.map { CGFloat(1.0 - $0.y) * h } ?? lowY
+
                         Circle()
                             .stroke(
                                 LinearGradient(
@@ -474,12 +519,12 @@ public struct TrackpadMatrixView: View {
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
-                                lineWidth: 2
+                                lineWidth: 2.5
                             )
-                            .frame(width: 90, height: 90)
-                            .position(x: lowX, y: lowY)
-                            .scaleEffect(viewModel.isHapticFlashing ? 1.5 : 0.6)
-                            .opacity(viewModel.isHapticFlashing ? 0.0 : 0.8)
+                            .frame(width: 100, height: 100)
+                            .position(x: shockX, y: shockY)
+                            .scaleEffect(viewModel.isHapticFlashing ? 1.6 : 0.6)
+                            .opacity(viewModel.isHapticFlashing ? 0.0 : 0.9)
                             .animation(.easeOut(duration: 0.25), value: viewModel.isHapticFlashing)
                     }
                 }

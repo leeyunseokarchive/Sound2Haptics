@@ -5,6 +5,7 @@ public final class AudioStreamProcessor: @unchecked Sendable {
     private let lock = NSLock()
     public let analyzer: AudioDSPAnalyzer
     public let engine: HapticEngine
+    public let touchTracker: TouchTrackingSource
 
     public var onAnalysis: (@Sendable (AudioAnalysisResult) -> Void)?
     public var onHapticTrigger: (@Sendable (Bool) -> Void)?
@@ -15,10 +16,12 @@ public final class AudioStreamProcessor: @unchecked Sendable {
 
     public init(
         analyzer: AudioDSPAnalyzer = AudioDSPAnalyzer(fftSize: 1024),
-        engine: HapticEngine = HapticEngine()
+        engine: HapticEngine = HapticEngine(),
+        touchTracker: TouchTrackingSource = MultitouchTracker.shared
     ) {
         self.analyzer = analyzer
         self.engine = engine
+        self.touchTracker = touchTracker
         self.fftSize = analyzer.fftSize
         self.sampleAccumulator.reserveCapacity(analyzer.fftSize * 2)
     }
@@ -42,8 +45,20 @@ public final class AudioStreamProcessor: @unchecked Sendable {
             let pan = currentStereoPan
             let result = analyzer.process(samples: window, sampleRate: sampleRate, config: engine.config, stereoPan: pan)
 
+            let touches = touchTracker.touches
             var didActuate = false
-            if result.isTrigger {
+
+            let shouldTrigger: Bool
+            if !touches.isEmpty {
+                // When fingers are touching the trackpad, strictly gate by multi-touch spatial coordinates!
+                shouldTrigger = SpatialTouchGate.evaluate(touches: touches, result: result, config: engine.config)
+            } else {
+                // When hands are off the trackpad (or in automated tests / non-multitouch hardware),
+                // fall back to global band trigger.
+                shouldTrigger = result.isTrigger
+            }
+
+            if shouldTrigger {
                 didActuate = engine.trigger(energy: result.bandEnergy)
             }
 

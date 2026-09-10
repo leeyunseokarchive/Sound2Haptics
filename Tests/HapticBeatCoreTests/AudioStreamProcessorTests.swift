@@ -147,4 +147,36 @@ final class AudioStreamProcessorTests: XCTestCase {
         XCTAssertNotNil(collectorHalf.last)
         XCTAssertGreaterThan(collectorNormal.last!.bandEnergy, collectorHalf.last!.bandEnergy)
     }
+
+    func testSpatialTouchGatedPipeline() {
+        let mockActuator = MockHapticActuator()
+        let mockTracker = MockTouchTracker()
+        let config = HapticBeatConfig(threshold: 0.25, frequencyBand: .bass)
+        let engine = HapticEngine(actuator: mockActuator, config: config)
+        let processor = AudioStreamProcessor(engine: engine, touchTracker: mockTracker)
+
+        let count = 1024
+        let bassWave = (0..<count).map { i in 0.8 * sin(2.0 * .pi * 60.0 * Float(i) / 48000.0) }
+        let silent = [Float](repeating: 0.0, count: count)
+
+        // 1. Finger is on RIGHT side (x: 0.85, y: 0.2). Play LEFT-panned bass sound (Left: bassWave, Right: silent)
+        mockTracker.touches = [TrackpadTouch(id: 1, x: 0.85, y: 0.2)]
+        processor.feedStereoAudio(left: bassWave, right: silent, sampleRate: sampleRate)
+        XCTAssertEqual(mockActuator.actuateCount, 0, "Right-side finger touch must NOT actuate on left-panned audio!")
+
+        // 2. Finger moves to LEFT side (x: 0.15, y: 0.2). Play LEFT-panned bass sound
+        mockTracker.touches = [TrackpadTouch(id: 1, x: 0.15, y: 0.2)]
+        processor.reset()
+        processor.feedStereoAudio(left: bassWave, right: silent, sampleRate: sampleRate)
+        XCTAssertEqual(mockActuator.actuateCount, 1, "Left-side finger touch MUST actuate on left-panned audio!")
+
+        // 3. Multi-touch: fingers on BOTH Left and Right. Play RIGHT-panned bass sound
+        mockTracker.touches = [
+            TrackpadTouch(id: 1, x: 0.15, y: 0.2),
+            TrackpadTouch(id: 2, x: 0.85, y: 0.2)
+        ]
+        processor.reset()
+        processor.feedStereoAudio(left: silent, right: bassWave, sampleRate: sampleRate)
+        XCTAssertEqual(mockActuator.actuateCount, 2, "Multi-touch spanning both sides must actuate on right-panned audio!")
+    }
 }

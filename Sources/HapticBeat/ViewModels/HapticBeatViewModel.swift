@@ -19,6 +19,7 @@ public final class HapticBeatViewModel: ObservableObject {
     @Published public var midEnergy: Float = 0.0
     @Published public var highEnergy: Float = 0.0
     @Published public var stereoPan: Float = 0.0
+    @Published public var activeTouches: [TrackpadTouch] = []
     @Published public var isHapticFlashing: Bool = false
     @Published public var triggerCount: Int = 0
     @Published public var hasPermission: Bool = true
@@ -29,6 +30,7 @@ public final class HapticBeatViewModel: ObservableObject {
     private var audioSource: ScreenCaptureKitAudioSource?
     private var flashTimer: Timer?
     private var demoTimer: Timer?
+    private var touchTimer: Timer?
 
     public init(config: HapticBeatConfig = HapticBeatConfig()) {
         self.config = config
@@ -37,6 +39,12 @@ public final class HapticBeatViewModel: ObservableObject {
         self.processor = AudioStreamProcessor(analyzer: analyzer, engine: engine)
 
         setupCallbacks()
+    }
+
+    deinit {
+        touchTimer?.invalidate()
+        flashTimer?.invalidate()
+        demoTimer?.invalidate()
     }
 
     private func setupCallbacks() {
@@ -49,6 +57,14 @@ public final class HapticBeatViewModel: ObservableObject {
                 self.midEnergy = result.midEnergy
                 self.highEnergy = result.highEnergy
                 self.stereoPan = result.stereoPan
+            }
+        }
+
+        // 30Hz lightweight touch cursor update for smooth UI tracking
+        touchTimer = Timer.scheduledTimer(withTimeInterval: 0.033, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                self.activeTouches = self.processor.touchTracker.touches
             }
         }
 

@@ -11,7 +11,7 @@ public struct MenuBarView: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             // Header
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: "waveform.badge.magnifyingglass")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.cyan)
@@ -43,7 +43,7 @@ public struct MenuBarView: View {
                     .labelsHidden()
                     .toggleStyle(.switch)
             }
-            .padding(.bottom, 4)
+            .padding(.bottom, 2)
 
             Divider()
 
@@ -90,21 +90,19 @@ public struct MenuBarView: View {
             }
 
             // Capture Status Banner / Button
-            HStack {
-                Button(action: {
-                    viewModel.toggleCapture()
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: viewModel.isCapturing ? "stop.circle.fill" : "record.circle")
-                            .foregroundColor(viewModel.isCapturing ? .red : .green)
-                        Text(viewModel.isCapturing ? "Stop System Capture" : "Start System Capture")
-                            .fontWeight(.medium)
-                    }
-                    .frame(maxWidth: .infinity)
+            Button(action: {
+                viewModel.toggleCapture()
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: viewModel.isCapturing ? "stop.circle.fill" : "record.circle")
+                        .foregroundColor(viewModel.isCapturing ? .red : .green)
+                    Text(viewModel.isCapturing ? "Stop System Capture" : "Start System Capture")
+                        .fontWeight(.medium)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(viewModel.isCapturing ? .red.opacity(0.8) : .blue)
+                .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .tint(viewModel.isCapturing ? .red.opacity(0.8) : .blue)
 
             // Permission Warning Banner (if ScreenCaptureKit is denied)
             if !viewModel.hasPermission {
@@ -135,16 +133,23 @@ public struct MenuBarView: View {
 
             // Frequency Band Selection
             VStack(alignment: .leading, spacing: 6) {
-                Text("Target Frequency Band")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.secondary)
+                HStack {
+                    Text("Target Frequency Band")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(viewModel.config.frequencyBand.rangeDescription)
+                        .font(.caption2)
+                        .foregroundColor(.cyan)
+                }
 
                 Picker("Band", selection: $viewModel.config.frequencyBand) {
                     ForEach(FrequencyBand.allCases, id: \.self) { band in
-                        Text(band.displayName).tag(band)
+                        Text(band.shortName).tag(band)
                     }
                 }
+                .labelsHidden()
                 .pickerStyle(.segmented)
             }
 
@@ -188,6 +193,7 @@ public struct MenuBarView: View {
                         Text(pattern.displayName).tag(pattern)
                     }
                 }
+                .labelsHidden()
                 .pickerStyle(.segmented)
             }
 
@@ -206,7 +212,7 @@ public struct MenuBarView: View {
                 Button(action: {
                     viewModel.toggleSyntheticBeatDemo()
                 }) {
-                    Label(viewModel.isSyntheticPlaying ? "Stop Demo" : "120BPM Demo", systemImage: viewModel.isSyntheticPlaying ? "pause.fill" : "play.fill")
+                    Label(viewModel.isSyntheticPlaying ? "Stop" : "120BPM Demo", systemImage: viewModel.isSyntheticPlaying ? "pause.fill" : "play.fill")
                         .font(.caption)
                 }
                 .buttonStyle(.bordered)
@@ -222,7 +228,8 @@ public struct MenuBarView: View {
                 .foregroundColor(.secondary)
             }
         }
-        .padding(16)
-        .frame(width: 320)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .frame(width: 350)
     }
 }

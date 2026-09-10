@@ -28,6 +28,22 @@ public enum FrequencyBand: String, CaseIterable, Sendable {
         case .full: return "Full Spectrum"
         }
     }
+
+    public var shortName: String {
+        switch self {
+        case .bass: return "Bass"
+        case .mid: return "Mid"
+        case .full: return "Full"
+        }
+    }
+
+    public var rangeDescription: String {
+        switch self {
+        case .bass: return "20-150Hz"
+        case .mid: return "151-2kHz"
+        case .full: return "20-20kHz"
+        }
+    }
 }
 
 public enum HapticPattern: String, CaseIterable, Sendable {

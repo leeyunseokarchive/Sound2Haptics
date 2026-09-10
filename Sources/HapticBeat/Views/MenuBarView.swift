@@ -192,21 +192,24 @@ public struct MenuBarView: View {
                     .foregroundColor(.secondary.opacity(0.8))
             }
 
-            // MARK: - Haptic Intensity
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Haptic Intensity")
-                    .font(.caption)
-                    .fontWeight(.medium)
+            // MARK: - Dynamic Haptic Response Status
+            HStack(spacing: 6) {
+                Image(systemName: "waveform.badge.magnifyingglass")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.cyan)
+                Text("Dynamic Volume Response")
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
-
-                Picker("Pattern", selection: $viewModel.config.pattern) {
-                    ForEach(HapticPattern.allCases, id: \.self) { pattern in
-                        Text(pattern.displayName).tag(pattern)
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.segmented)
+                Spacer()
+                Text(viewModel.lastTriggeredPattern.displayName.uppercased())
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundColor(.cyan)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.cyan.opacity(0.12))
+                    .cornerRadius(4)
             }
+            .padding(.vertical, 2)
 
             Divider()
 
@@ -267,9 +270,18 @@ public struct TrackpadMatrixView: View {
                     Image(systemName: "rectangle.portrait.and.arrow.forward")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.cyan)
-                    Text("TRACKPAD HAPTIC MATRIX")
+                    Text("TRACKPAD MATRIX")
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
                         .foregroundColor(.secondary)
+
+                    // Dynamic Tag
+                    Text("DYNAMIC")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundColor(.cyan)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1.5)
+                        .background(Color.cyan.opacity(0.12))
+                        .cornerRadius(3)
                 }
 
                 Spacer()
@@ -516,22 +528,35 @@ public struct TrackpadMatrixView: View {
                         let shockX = viewModel.activeTouches.first.map { margin + CGFloat($0.x) * trackWidth } ?? lowX
                         let shockY = viewModel.activeTouches.first.map { margin + CGFloat(1.0 - $0.y) * trackHeight } ?? lowY
 
+                        let (baseSize, strokeW, scaleEnd): (CGFloat, CGFloat, CGFloat) = {
+                            switch viewModel.lastTriggeredPattern {
+                            case .light:
+                                return (60, 1.5, 1.3)
+                            case .medium:
+                                return (95, 2.5, 1.6)
+                            case .strong:
+                                return (135, 3.5, 2.0)
+                            }
+                        }()
+
                         Circle()
                             .stroke(
                                 LinearGradient(
-                                    colors: [.cyan, .white, .orange],
+                                    colors: viewModel.lastTriggeredPattern == .strong
+                                        ? [.orange, .yellow, .white]
+                                        : [.cyan, .white, .orange],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
-
                                 ),
-                                lineWidth: 2.5
+                                lineWidth: strokeW
                             )
-                            .frame(width: 100, height: 100)
+                            .frame(width: baseSize, height: baseSize)
                             .position(x: shockX, y: shockY)
-                            .scaleEffect(viewModel.isHapticFlashing ? 1.6 : 0.6)
-                            .opacity(viewModel.isHapticFlashing ? 0.0 : 0.9)
+                            .scaleEffect(viewModel.isHapticFlashing ? scaleEnd : 0.5)
+                            .opacity(viewModel.isHapticFlashing ? 0.0 : 0.95)
                             .animation(.easeOut(duration: 0.25), value: viewModel.isHapticFlashing)
                     }
+
                 }
             }
             .frame(height: 135)

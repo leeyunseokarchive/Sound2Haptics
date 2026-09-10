@@ -43,6 +43,10 @@
 - **원했던 결과**: 상단 메뉴바 팝오버를 열었을 때 모든 라벨("Energy Level", "Threshold", "Pattern", "Full Spectrum")과 버튼이 잘림 없이 깔끔하게 표시될 것.
 - **실제 결과**: 초기 팝오버 실행 시 좌측과 우측이 약 20px씩 잘려 "ergy Level", "eshold", "ttern", "Full Spectrur"로 텍스트가 잘리는 현상 발생 (`스크린샷 2026-09-10 10.26.56.png` 참고).
 
+### 문제 5: ScreenCaptureKit 캡처 시작 후 브라우저 음악 재생 시 햅틱 미반응
+- **원했던 결과**: 'Start System Capture' 버튼을 누르고 브라우저(유튜브 등)에서 음악을 틀었을 때 실시간 에너지 미터가 올라가며 트랙패드 햅틱이 울릴 것.
+- **실제 결과**: 캡처를 시작하고 음악을 재생해도 실시간 에너지 레벨 미터가 0%에 머물고 햅틱이 전혀 반응하지 않음.
+
 ---
 
 ## 3. 원인 분석 (왜 발생했다고 생각했는가?)
@@ -57,6 +61,10 @@
 4. **원인 4 (AppKit의 NSPopover 고정 프레임 및 SwiftUI Picker 기본 2-컬럼 라벨)**:
    - macOS AppKit 환경에서 `Picker`는 기본적으로 좌측에 라벨("Band", "Pattern") 컬럼을 생성하므로 내부 콘텐츠의 최소 고유 너비(Intrinsic Width)가 약 360px 이상으로 확장되었습니다.
    - 반면 `NSPopover`의 창 크기는 `320px`로 하드코딩되어 있어, SwiftUI가 오버플로된 콘텐츠를 가운데 정렬하면서 좌우 약 20px씩 잘려 나가는 클리핑 현상이 발생했습니다.
+5. **원인 5 (CoreMedia의 Non-Interleaved 오디오 버퍼 리스트 크기 부족 오류 -12737)**:
+   - macOS `ScreenCaptureKit`은 시스템 오디오를 2채널 Non-Interleaved(좌/우 버퍼 분리) 방식으로 전달합니다.
+   - 따라서 `CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer` 함수는 2개의 개별 버퍼 구조체를 담을 수 있는 40바이트의 `AudioBufferList`를 필요로 합니다.
+   - 하지만 기존 코드는 단일 버퍼 크기(16바이트)의 `var bufferList = AudioBufferList()`를 정적으로 넘겨주어, 함수가 매 프레임마다 `-12737` (`kCMSampleBufferError_ArrayTooSmall`) 에러를 반환하고 모든 오디오 데이터를 버리고 있었습니다.
 
 ---
 
@@ -81,6 +89,10 @@ AI 에이전트와 체계적인 엔지니어링 절차(TDD, Spec 구체화, 하�
 - 세그먼트 Picker에 `.labelsHidden()`을 지정하여 불필요한 좌측 라벨 컬럼을 제거하고 컨트롤이 전체 너비를 채우도록 개선했습니다.
 - 세그먼트 텍스트를 컴팩트하게("Bass", "Mid", "Full") 구성하고 상단에 주파수 범위 설명을 분리 배치했습니다.
 - `AppDelegate`에서 `NSHostingController.view.fittingSize`를 동적으로 측정하여 팝오버 크기를 설정하도록 변경함으로써 텍스트와 버튼이 여유 있게 표시되도록 완벽히 수정했습니다.
+
+### 해결 5: `AudioBufferList.allocate` 동적 할당 및 기본 감도 최적화
+- `ScreenCaptureKitAudioSource.swift`에서 채널 수에 맞춰 `AudioBufferList.allocate(maximumBuffers: channelCount)`를 동적으로 할당하고 `free()`로 반환하도록 수정하여 에러 코드 `-12737`을 완전히 제거했습니다.
+- 브라우저 음악 및 유튜브의 평균 마스터 볼륨 음압에 맞춰 기본 임계값을 45%에서 실용적인 **25%**로, 순간 어택 감도를 0.08에서 **0.04**로 튜닝하여, 브라우저에서 음악을 틀자마자 트랙패드가 즉각 리듬감 있게 반응하도록 개선했습니다. (`swift run HapticBeat --test-capture`로 실제 시스템 오디오 282프레임 캡처 및 햅틱 정상 격발 검증 완료)
 
 ---
 
